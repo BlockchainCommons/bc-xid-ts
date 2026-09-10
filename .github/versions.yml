@@ -1,0 +1,8 @@
+# Version map: TypeScript package -> Reference implementation
+# Used by workflow automation to track upstream reference versions.
+packages:
+  xid:
+    npm: "@blockchaincommons/xid"
+    repo: "BlockchainCommons/bc-xid-rust"
+    version: "0.23.0"
+    commit: "e64924eb04e7af3303674663f217768095d73475"
