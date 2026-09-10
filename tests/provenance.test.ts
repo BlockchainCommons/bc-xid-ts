@@ -4,7 +4,10 @@
  */
 
 import { PrivateKeyBase, KeyDerivationMethod } from "@blockchaincommons/components";
-import { ProvenanceMarkGenerator, ProvenanceMarkResolution } from "@blockchaincommons/provenance-mark";
+import {
+  ProvenanceMarkGenerator,
+  ProvenanceMarkResolution,
+} from "@blockchaincommons/provenance-mark";
 import { cbor } from "@blockchaincommons/dcbor-compat";
 import {
   Provenance,

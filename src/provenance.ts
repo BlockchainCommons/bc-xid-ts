@@ -22,9 +22,17 @@
  * ```
  */
 
-import { Envelope, type EnvelopeEncodable, type EnvelopeEncodableValue } from "@blockchaincommons/envelope";
+import {
+  Envelope,
+  type EnvelopeEncodable,
+  type EnvelopeEncodableValue,
+} from "@blockchaincommons/envelope";
 import { PROVENANCE_GENERATOR, SALT, type KnownValue } from "@blockchaincommons/known-values";
-import { Salt, type KeyDerivationMethod, defaultKeyDerivationMethod } from "@blockchaincommons/components";
+import {
+  Salt,
+  type KeyDerivationMethod,
+  defaultKeyDerivationMethod,
+} from "@blockchaincommons/components";
 import type { Cbor } from "@blockchaincommons/dcbor-compat";
 import { ProvenanceMark, ProvenanceMarkGenerator } from "@blockchaincommons/provenance-mark";
 import { XIDError } from "./error";

@@ -26,8 +26,19 @@
  * byte_string(32))`).
  */
 
-import { Envelope, type EnvelopeEncodable, type EnvelopeEncodableValue } from "@blockchaincommons/envelope";
-import { KEY, DELEGATE, NAME, CAPABILITY, ALLOW, type KnownValue } from "@blockchaincommons/known-values";
+import {
+  Envelope,
+  type EnvelopeEncodable,
+  type EnvelopeEncodableValue,
+} from "@blockchaincommons/envelope";
+import {
+  KEY,
+  DELEGATE,
+  NAME,
+  CAPABILITY,
+  ALLOW,
+  type KnownValue,
+} from "@blockchaincommons/known-values";
 import { Reference, URI, type PublicKeys, type XID } from "@blockchaincommons/components";
 import type { Cbor } from "@blockchaincommons/dcbor-compat";
 import { Permissions, type HasPermissions } from "./permissions";

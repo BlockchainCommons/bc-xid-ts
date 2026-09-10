@@ -12,7 +12,13 @@
  */
 
 import { Envelope, type EnvelopeEncodable } from "@blockchaincommons/envelope";
-import { ENDPOINT, NICKNAME, PRIVATE_KEY, SALT, type KnownValue } from "@blockchaincommons/known-values";
+import {
+  ENDPOINT,
+  NICKNAME,
+  PRIVATE_KEY,
+  SALT,
+  type KnownValue,
+} from "@blockchaincommons/known-values";
 import type { EnvelopeEncodableValue } from "@blockchaincommons/envelope";
 import type { Cbor } from "@blockchaincommons/dcbor-compat";
 import {
