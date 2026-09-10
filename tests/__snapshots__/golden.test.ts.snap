@@ -1,0 +1,697 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden > decodes 1`] = `
+[
+  "## decode none ur:envelope/lftpsotanshdhdcxjsdigtwneocm
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## decode inception ur:envelope/lftpsotanshdhdcxjsdigtwneocm
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/tpsotanshdhdcxehadtawfcyrtpt
+XID(3101d9f3)",
+  "## decode inception ur:envelope/tpsotanshdhdcxehadtawfcyrtpt
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/lftpsotanshdhdcxjsdigtwneocm
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## decode inception ur:envelope/lftpsotanshdhdcxjsdigtwneocm
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/lftpsotanshdhdcxluotinhtfxvt
+XID(8ba3695a) [
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'All'
+    ]
+]",
+  "## decode inception ur:envelope/lftpsotanshdhdcxluotinhtfxvt
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/lrtpsotanshdhdcxluotinhtfxvt
+XID(8ba3695a) [
+    'dereferenceVia': URI(btcr:01234567)
+    'dereferenceVia': URI(https://resolver.example.com)
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'All'
+    ]
+]",
+  "## decode inception ur:envelope/lrtpsotanshdhdcxluotinhtfxvt
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+XID(71274df1) [
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'All'
+        'endpoint': URI(btc:9d2203b1c72eddc072b566c4a16ed8757fcba95a3be6f270e17a128e41554b33)
+        'endpoint': URI(https://resolver.example.com)
+        'nickname': "Alice's key"
+    ]
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/lntpsotanshdhdcxjsdigtwneocm
+XID(71274df1) [
+    'delegate': {
+        XID(48f7e2df)
+    } [
+        'allow': 'Verify'
+    ]
+    'delegate': {
+        XID(8ba3695a) [
+            'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+                'allow': 'All'
+            ]
+        ]
+    } [
+        'allow': 'Encrypt'
+        'allow': 'Sign'
+    ]
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'Encrypt'
+        'allow': 'Sign'
+        'deny': 'Burn'
+    ]
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'service': URI(https://example.com) [
+        'allow': 'Encrypt'
+        'allow': 'Sign'
+        'capability': "com.example.messaging"
+        'delegate': Reference(8ba3695a)
+        'key': Reference(b67d8052)
+        'key': Reference(eb9b1cae)
+        'name': "Example Service"
+    ]
+]",
+  "## decode inception ur:envelope/lntpsotanshdhdcxjsdigtwneocm
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/lttpsotanshdhdcxjsdigtwneocm
+XID(71274df1) [
+    "customField": "customValue"
+    'attachment': {
+        "Attachment Data"
+    } [
+        'conformsTo': "https://example.com/schema"
+        'vendor': "com.example"
+    ]
+    'attachment': {
+        "Second"
+    } [
+        'vendor': "org.example"
+    ]
+    'edge': "knows-bob" [
+        'isA': "schema:colleague"
+        'source': "Alice"
+        'target': "Bob"
+    ]
+    'edge': "self-desc" [
+        'isA': "foaf:Person"
+        'source': "Alice"
+        'target': "Alice"
+    ]
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## decode inception ur:envelope/lttpsotanshdhdcxjsdigtwneocm
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': 1347571542([0, h'b16a7cbd27610028c72a768d50921dd8ea6bc762a7ec1d40'])
+]",
+  "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': 1347571542([1, h'b16a7cbd178ee0d48a0705c629d2b396675d31c6dc7245efe94fd18f1cd5835945e7f9cd01f2f243'])
+]",
+  "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': 1347571542([2, h'b16a7cbd178ee0d41cadb0dcefdbe87d121f8c3a62db62944dc8b28f906d09c677bfaacc5df3913d1bd90b796641e55c29f6be13695f44f8c2caaaba35596d913bbb'])
+]",
+  "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': 1347571542([3, h'b16a7cbd178ee0d41cadb0dcefdbe87d6a41c85b41c551134ae8307f9203babc66e7ef6821f5fe3f4ac9b4754e64c3789845a661e394ab354808269d8ad1a118d3f44b8103daf8fabcf55cbdfe28341be4b99680d20ca00a5710da72032848ead9d5c39a0b5367c50fb00553d492a2a219a6'])
+]",
+  "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': 1347571542([2, h'af9613760f72635fbdb44a5a0a63c39f479aacdc37011f5a18361a9688740bc993d577c947229dcd7c5aeed35bb54771e29c3d2804742006c020'])
+]",
+  "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
+throw:ENVELOPE_NOT_SIGNED",
+  "## decode none ur:envelope/tpsoihfyihjzjzjlbtzdvlvo
+throw:Bytewords error (invalid word)",
+  "## decode none ur:xid/notbytewords
+throw:Bytewords error (invalid word)",
+]
+`;
+
+exports[`golden > mutation scripts 1`] = `
+[
+  "## mutate privateKeyBase:7eb559bb keys×2: removeKey,removeKey,takeKey,takeKey
+removeKey=ok
+removeKey=throw:NOT_FOUND
+takeKey=2235523711230e76c752e7cab3383da13970a829bc507f505606e164eade7f65
+takeKey=undefined
+===
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb keys×2: removeInceptionKey,removeInceptionKey,checkContainsKey,checkContainsKey
+removeInceptionKey=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8
+removeInceptionKey=undefined
+checkContainsKey=throw:KEY_NOT_FOUND_IN_DOCUMENT
+checkContainsKey=ok
+===
+XID(71274df1) [
+    'key': PublicKeys(22355237, SigningPublicKey(48f7e2df, Ed25519PublicKey(2c3d976b)), EncapsulationPublicKey(36a0b431, X25519PublicKey(36a0b431)))
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'Sign'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb keys×2: setNameForKey,setNameForKey,addKey,addKey
+setNameForKey=ok
+setNameForKey=ok
+addKey=throw:DUPLICATE
+addKey=ok
+===
+XID(71274df1) [
+    'key': PublicKeys(22355237, SigningPublicKey(48f7e2df, Ed25519PublicKey(2c3d976b)), EncapsulationPublicKey(36a0b431, X25519PublicKey(36a0b431)))
+    'key': PublicKeys(0565b31a, SigningPublicKey(a6e280cc, Ed25519PublicKey(024a85da)), EncapsulationPublicKey(ebda211f, X25519PublicKey(ebda211f))) [
+        'nickname': "new"
+    ]
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'Sign'
+        'nickname': "renamed"
+    ]
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb keys×2 services×1: removeKey,takeKey,removeService,removeKey,removeService,takeService
+removeKey=throw:STILL_REFERENCED
+takeKey=b67d8052f1db8d6b572b9abe91670cc26c157490b260f11f26b3cf47d01ac802
+removeService=ok
+removeKey=throw:NOT_FOUND
+removeService=throw:NOT_FOUND
+takeService=undefined
+===
+XID(71274df1) [
+    'key': PublicKeys(22355237, SigningPublicKey(48f7e2df, Ed25519PublicKey(2c3d976b)), EncapsulationPublicKey(36a0b431, X25519PublicKey(36a0b431)))
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb keys×2 services×1: checkServices,addService,addService,addService,addService
+checkServices=ok
+addService=throw:DUPLICATE
+addService=ok
+addService=ok
+addService=ok
+===
+XID(71274df1) [
+    'key': PublicKeys(22355237, SigningPublicKey(48f7e2df, Ed25519PublicKey(2c3d976b)), EncapsulationPublicKey(36a0b431, X25519PublicKey(36a0b431)))
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'Sign'
+    ]
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'service': URI(https://s.example) [
+        'allow': 'Sign'
+        'key': Reference(b67d8052)
+    ]
+    'service': URI(https://t.example) [
+        'key': Reference(22355237)
+    ]
+    'service': URI(https://u.example) [
+        'allow': 'Sign'
+    ]
+    'service': URI(https://v.example) [
+        'allow': 'Sign'
+        'key': Reference(22355237)
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb delegates×1 services×1: checkContainsDelegate,removeDelegate,takeDelegate,removeService,removeDelegate,takeDelegate,checkContainsDelegate
+checkContainsDelegate=ok
+removeDelegate=throw:STILL_REFERENCED
+takeDelegate=8ba3695a
+removeService=ok
+removeDelegate=throw:NOT_FOUND
+takeDelegate=undefined
+checkContainsDelegate=throw:DELEGATE_NOT_FOUND_IN_DOCUMENT
+===
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb res×1: addResolution,removeResolution,removeResolution,addResolution
+addResolution=ok
+removeResolution=true
+removeResolution=false
+addResolution=ok
+===
+XID(71274df1) [
+    'dereferenceVia': URI(btcr:1)
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb attachments×2 edges×1: removeAttachment,removeAttachment,removeEdge,clearAttachments,clearEdges
+removeAttachment=removed
+removeAttachment=removed
+removeEdge=removed
+clearAttachments=ok
+clearEdges=ok
+===
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb genesis(low "Wolf" 2025-01-01T00:00:00Z): nextMark,nextMark,clone,clearProvenance,nextMark
+nextMark=ok
+nextMark=ok
+clone=ok
+clearProvenance=ok
+nextMark=throw:NO_PROVENANCE_MARK
+===
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb: nextMark
+nextMark=throw:NO_PROVENANCE_MARK
+===
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb genesis(medium "Wolf" 2025-01-01T00:00:00Z): clone,nextMark
+clone=ok
+nextMark=ok
+===
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': 1347571542([1, h'558dbfc6536b2968ecc011f86f032d24f52b384e87a29aa6ec4c33ed2884f323'])
+]",
+]
+`;
+
+exports[`golden > reference documents 1`] = `
+[
+  "## doc publicKeys:7eb559bb/schnorr [omit/omit/none]
+format=XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]
+cbor=d8c882d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846
+ur=ur:envelope/lftpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgwlpltkvd
+digest=333415b020e1d4031b08d940de03351ea7866d02b4cf0d032f4e8852d7941d0d
+xid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+reference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+isEmpty=false
+keys=1
+inception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8
+resolution=
+services=
+delegates=
+attachments=0
+edges=0
+provenance=-
+generator=-
+roundtrip=true
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc xid:7eb559bb/schnorr [omit/omit/none]
+format=XID(3101d9f3)
+cbor=d8c8d8c9d99c5858203101d9f31ac0a9d5644fc2438c1d5ca32673937480bb6ebdcc6d80845d433cad
+ur=ur:envelope/tpsotanshdhdcxehadtawfcyrtpttliegwsafxlkcahhotdsjkmujylarkjtrysfjnlalrhlfxfnpmbeonfrls
+digest=c6466d0425e136e693cccadb722bc0a42e015bb42d92fb6fd228c01aba855748
+xid=3101d9f31ac0a9d5644fc2438c1d5ca32673937480bb6ebdcc6d80845d433cad
+reference=3101d9f31ac0a9d5644fc2438c1d5ca32673937480bb6ebdcc6d80845d433cad
+isEmpty=true
+keys=0
+inception=-
+resolution=
+services=
+delegates=
+attachments=0
+edges=0
+provenance=-
+generator=-
+roundtrip=true
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc privateKeyBase:7eb559bb [omit/omit/none]
+format=XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]
+cbor=d8c882d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846
+ur=ur:envelope/lftpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgwlpltkvd
+digest=333415b020e1d4031b08d940de03351ea7866d02b4cf0d032f4e8852d7941d0d
+xid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+reference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+isEmpty=false
+keys=1
+inception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8 private
+resolution=
+services=
+delegates=
+attachments=0
+edges=0
+provenance=-
+generator=-
+roundtrip=false
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc publicKeys:518684c5 [omit/omit/none]
+format=XID(8ba3695a) [
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'All'
+    ]
+]
+cbor=d8c882d8c9d99c5858208ba3695a43e026ed77ad1393aadfbb7fe78b0620f95ea3e127562b331dd9e567a10882d8c9d99c5182d99c568202582074a920098ef157e49ea99fab7b7979397af1b5a0319fbfa85b3c5fcbb5eeadcdd99c4b582099e664cf473fa0a2f597cd32d86b772affcae1ef0bc5f1b953f4dc6bf0493f45a1183c1846
+ur=ur:envelope/lftpsotanshdhdcxluotinhtfxvtdswektpmbwmupkurrklbvdluamcxythyotvydihfdneocatavwiooyaylftpsotansgylftanshflfaohdcxjyptcxasmnwnhgvennptnepykgkkkkesknwnrenbehnerspdhpfnhesbrewypmsntansgrhdcxnlvaietkflfhnboeykmssneytpjektdrzmsgvywsbdskwnrhguwkuojewtgafhfeoycsfncsfgfhpdvley
+digest=b20ed4f7d557e371fe6157003dad08eb237b11ac011ae40ad643a9760a8871e6
+xid=8ba3695a43e026ed77ad1393aadfbb7fe78b0620f95ea3e127562b331dd9e567
+reference=8ba3695a43e026ed77ad1393aadfbb7fe78b0620f95ea3e127562b331dd9e567
+isEmpty=false
+keys=1
+inception=b67d8052f1db8d6b572b9abe91670cc26c157490b260f11f26b3cf47d01ac802
+resolution=
+services=
+delegates=
+attachments=0
+edges=0
+provenance=-
+generator=-
+roundtrip=true
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc publicKeys:518684c5 res×2 [omit/omit/none]
+format=XID(8ba3695a) [
+    'dereferenceVia': URI(btcr:01234567)
+    'dereferenceVia': URI(https://resolver.example.com)
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'All'
+    ]
+]
+cbor=d8c884d8c9d99c5858208ba3695a43e026ed77ad1393aadfbb7fe78b0620f95ea3e127562b331dd9e567a109d8c9d820781c68747470733a2f2f7265736f6c7665722e6578616d706c652e636f6da109d8c9d8206d627463723a3031323334353637a10882d8c9d99c5182d99c568202582074a920098ef157e49ea99fab7b7979397af1b5a0319fbfa85b3c5fcbb5eeadcdd99c4b582099e664cf473fa0a2f597cd32d86b772affcae1ef0bc5f1b953f4dc6bf0493f45a1183c1846
+ur=ur:envelope/lrtpsotanshdhdcxluotinhtfxvtdswektpmbwmupkurrklbvdluamcxythyotvydihfdneocatavwiooyastpsotpcxksceisjyjyjojkftdldljpihjkjljzkoihjpdmihkshsjnjojzihdmiajljnoyastpsotpcxjnidjyiajpftdyeheyeoeeecenemoyaylftpsotansgylftanshflfaohdcxjyptcxasmnwnhgvennptnepykgkkkkesknwnrenbehnerspdhpfnhesbrewypmsntansgrhdcxnlvaietkflfhnboeykmssneytpjektdrzmsgvywsbdskwnrhguwkuojewtgafhfeoycsfncsfgnbcpgutb
+digest=b272e89e3b389479f935532b4a91813d90441e9d69b26fa5ad8d4788087fc43b
+xid=8ba3695a43e026ed77ad1393aadfbb7fe78b0620f95ea3e127562b331dd9e567
+reference=8ba3695a43e026ed77ad1393aadfbb7fe78b0620f95ea3e127562b331dd9e567
+isEmpty=false
+keys=1
+inception=b67d8052f1db8d6b572b9abe91670cc26c157490b260f11f26b3cf47d01ac802
+resolution=btcr:01234567,https://resolver.example.com
+services=
+delegates=
+attachments=0
+edges=0
+provenance=-
+generator=-
+roundtrip=true
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc privateKeyBase:7eb559bb keys×1 [omit/omit/none]
+format=XID(71274df1) [
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'All'
+        'endpoint': URI(btc:9d2203b1c72eddc072b566c4a16ed8757fcba95a3be6f270e17a128e41554b33)
+        'endpoint': URI(https://resolver.example.com)
+        'nickname': "Alice's key"
+    ]
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]
+cbor=d8c883d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca10885d8c9d99c5182d99c568202582074a920098ef157e49ea99fab7b7979397af1b5a0319fbfa85b3c5fcbb5eeadcdd99c4b582099e664cf473fa0a2f597cd32d86b772affcae1ef0bc5f1b953f4dc6bf0493f45a11818d8c96b416c6963652773206b6579a1183c1846a1183ed8c9d820781c68747470733a2f2f7265736f6c7665722e6578616d706c652e636f6da1183ed8c9d82078446274633a39643232303362316337326564646330373262353636633461313665643837353766636261393561336265366632373065313761313238653431353534623333a10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846
+ur=ur:envelope/lstpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoyaylptpsotansgylftanshflfaohdcxjyptcxasmnwnhgvennptnepykgkkkkesknwnrenbehnerspdhpfnhesbrewypmsntansgrhdcxnlvaietkflfhnboeykmssneytpjektdrzmsgvywsbdskwnrhguwkuojewtgafhfeoycscstpsojefpjziniaihdijkcxjeihkkoycsfncsfgoycsfmtpsotpcxksceisjyjyjojkftdldljpihjkjljzkoihjpdmihkshsjnjojzihdmiajljnoycsfmtpsotpcxksfyidjyiaftesieeyeydyeoidehiaemeyihieieiadyemeyideceneniaeehsehenihieetemecemiyiaidhsesechseoidiheniyeyemdyihehemhseheyetiheeehececeeideoeooyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfglgrhuout
+digest=2ad467d0e4991d36457c6cbfc3ffbd59aecff34dff753cc0ecd5372e9a302abc
+xid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+reference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+isEmpty=false
+keys=2
+inception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8 private
+resolution=
+services=
+delegates=
+attachments=0
+edges=0
+provenance=-
+generator=-
+roundtrip=false
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc privateKeyBase:7eb559bb keys×1 delegates×2 services×1 [omit/omit/none]
+format=XID(71274df1) [
+    'delegate': {
+        XID(48f7e2df)
+    } [
+        'allow': 'Verify'
+    ]
+    'delegate': {
+        XID(8ba3695a) [
+            'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+                'allow': 'All'
+            ]
+        ]
+    } [
+        'allow': 'Encrypt'
+        'allow': 'Sign'
+    ]
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'Encrypt'
+        'allow': 'Sign'
+        'deny': 'Burn'
+    ]
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'service': URI(https://example.com) [
+        'allow': 'Encrypt'
+        'allow': 'Sign'
+        'capability': "com.example.messaging"
+        'delegate': Reference(8ba3695a)
+        'key': Reference(b67d8052)
+        'key': Reference(eb9b1cae)
+        'name': "Example Service"
+    ]
+]
+cbor=d8c886d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca1183f82d8c8d8c9d99c58582048f7e2df6f33bf65c20199faef908aed4ed87019fbe0f8aceb1e6a8e70d3f9baa1183c1851a1183f83d8c882d8c9d99c5858208ba3695a43e026ed77ad1393aadfbb7fe78b0620f95ea3e127562b331dd9e567a10882d8c9d99c5182d99c568202582074a920098ef157e49ea99fab7b7979397af1b5a0319fbfa85b3c5fcbb5eeadcdd99c4b582099e664cf473fa0a2f597cd32d86b772affcae1ef0bc5f1b953f4dc6bf0493f45a1183c1846a1183c1848a1183c1849a10884d8c9d99c5182d99c568202582074a920098ef157e49ea99fab7b7979397af1b5a0319fbfa85b3c5fcbb5eeadcdd99c4b582099e664cf473fa0a2f597cd32d86b772affcae1ef0bc5f1b953f4dc6bf0493f45a1183d1855a1183c1848a1183c1849a10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846a1184288d8c9d8207368747470733a2f2f6578616d706c652e636f6da1183fd8c9d99c5958208ba3695a43e026ed77ad1393aadfbb7fe78b0620f95ea3e127562b331dd9e567a108d8c9d99c595820eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8a11843d8c975636f6d2e6578616d706c652e6d6573736167696e67a108d8c9d99c595820b67d8052f1db8d6b572b9abe91670cc26c157490b260f11f26b3cf47d01ac802a1183c1848a10bd8c96f4578616d706c652053657276696365a1183c1849
+ur=ur:envelope/lntpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoycsfhlftpsptpsotanshdhdcxfdylvourjleorsihsaadnlzswsmhlewegltpjocfzovtyapswmckimmnjoteytrdoycsfncsgyoycsfhlstpsplftpsotanshdhdcxluotinhtfxvtdswektpmbwmupkurrklbvdluamcxythyotvydihfdneocatavwiooyaylftpsotansgylftanshflfaohdcxjyptcxasmnwnhgvennptnepykgkkkkesknwnrenbehnerspdhpfnhesbrewypmsntansgrhdcxnlvaietkflfhnboeykmssneytpjektdrzmsgvywsbdskwnrhguwkuojewtgafhfeoycsfncsfgoycsfncsfdoycsfncsgaoyaylrtpsotansgylftanshflfaohdcxjyptcxasmnwnhgvennptnepykgkkkkesknwnrenbehnerspdhpfnhesbrewypmsntansgrhdcxnlvaietkflfhnboeykmssneytpjektdrzmsgvywsbdskwnrhguwkuojewtgafhfeoycsfscsgooycsfncsfdoycsfncsgaoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgoycsfwlotpsotpcxjkisjyjyjojkftdldlihkshsjnjojzihdmiajljnoycsfhtpsotanshkhdcxluotinhtfxvtdswektpmbwmupkurrklbvdluamcxythyotvydihfdneocatavwiooyaytpsotanshkhdcxwmndcepljtprfrvwtawpidbsrybkcmwpbwkphfgtfdieaywmtdfzzokoostkmkspoycsfxtpsokpiajljndmihkshsjnjojzihdmjnihjkjkhsioinjtiooyaytpsotanshkhdcxrpkilagmwnuylgjehgdnnyrnmeiobnsajzbzjymhprhnwnctdsqdtkflticyspaooycsfncsfdoybdtpsojlfekshsjnjojzihcxguihjpkoiniaihoycsfncsgamdktjeje
+digest=251b8c96e6eb91d8f394aa939408a8a762522003e5be10cd3e0c9ba882bd454f
+xid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+reference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+isEmpty=false
+keys=2
+inception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8 private
+resolution=
+services=https://example.com
+delegates=48f7e2df,8ba3695a
+attachments=0
+edges=0
+provenance=-
+generator=-
+roundtrip=false
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc privateKeyBase:7eb559bb attachments×2 edges×2 custom×1 [omit/omit/none]
+format=XID(71274df1) [
+    "customField": "customValue"
+    'attachment': {
+        "Attachment Data"
+    } [
+        'conformsTo': "https://example.com/schema"
+        'vendor': "com.example"
+    ]
+    'attachment': {
+        "Second"
+    } [
+        'vendor': "org.example"
+    ]
+    'edge': "knows-bob" [
+        'isA': "schema:colleague"
+        'source': "Alice"
+        'target': "Bob"
+    ]
+    'edge': "self-desc" [
+        'isA': "foaf:Person"
+        'source': "Alice"
+        'target': "Alice"
+    ]
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]
+cbor=d8c887d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca1183282d8c8d8c9665365636f6e64a11833d8c96b6f72672e6578616d706c65a11902bd84d8c96973656c662d64657363a11902bfd8c965416c696365a101d8c96b666f61663a506572736f6ea11902bed8c965416c696365a11902bd84d8c9696b6e6f77732d626f62a11902bfd8c963426f62a101d8c970736368656d613a636f6c6c6561677565a11902bed8c965416c696365a10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846a1d8c96b637573746f6d4669656c64d8c96b637573746f6d56616c7565a1183283d8c8d8c96f4174746163686d656e742044617461a11834d8c9781a68747470733a2f2f6578616d706c652e636f6d2f736368656d61a11833d8c96b636f6d2e6578616d706c65
+ur=ur:envelope/lttpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoycseylftpsptpsoiyguihiajljtieoycseotpsojejljpiodmihkshsjnjojzihoycfaorylrtpsoinjkihjziydpieihjkiaoycfaorstpsoihfpjziniaihoyadtpsojeiyjlhsiyftgdihjpjkjljtoycfaorntpsoihfpjziniaihoycfaorylrtpsoinjejtjlktjkdpidjlidoycfaorstpsoiafwjlidoyadtpsojojkiaisihjnhsftiajljzjzihhsiokpihoycfaorntpsoihfpjziniaihoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgoytpsojeiakpjkjyjljnfginihjzietpsojeiakpjkjyjljnhfhsjzkpihoycseylstpsptpsojlfpjyjyhsiaisjnihjtjycxfyhsjyhsoycseetpsokscyisjyjyjojkftdldlihkshsjnjojzihdmiajljndljkiaisihjnhsoycseotpsojeiajljndmihkshsjnjojzihaoetoytt
+digest=41c97989556af95e7e20c50b089160392ed4788b0ba3f9529d96e6ad5c9c70d9
+xid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+reference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+isEmpty=false
+keys=1
+inception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8
+resolution=
+services=
+delegates=
+attachments=2
+edges=2
+provenance=-
+generator=-
+roundtrip=true
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc privateKeyBase:7eb559bb genesis(low "test" 2025-01-01T00:00:00Z info) [omit/omit/none]
+format=XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': 1347571542([0, h'b16a7cbd27610028c72a768d50921dd8ea6bc762a7ec1d40'])
+]
+cbor=d8c883d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca11840d8c9da50524f5682005818b16a7cbd27610028c72a768d50921dd8ea6bc762a7ec1d40a10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846
+ur=ur:envelope/lstpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoycsfztpsotngdgmgwhflfaehdcspaimkerydihsaedestdrkolggdmocatpwdjestidoswpcafzoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgmhgyjnfr
+digest=d782aa449e289174522218eea672fd55ec3e6ae211d078e17ae120a69dd66e22
+xid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+reference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+isEmpty=false
+keys=1
+inception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8 private
+resolution=
+services=
+delegates=
+attachments=0
+edges=0
+provenance=ur:provenance/lfaehdcspaimkerydihsaedestdrkolggdmocatpwdjestidoswpcafzplayclwf
+generator=nextSeq=1
+roundtrip=false
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc privateKeyBase:7eb559bb genesis(medium "test" 2025-01-01T00:00:00Z info) [omit/omit/none]
+format=XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': 1347571542([1, h'b16a7cbd178ee0d48a0705c629d2b396675d31c6dc7245efe94fd18f1cd5835945e7f9cd01f2f243'])
+]
+cbor=d8c883d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846a11840d8c9da50524f5682015828b16a7cbd178ee0d48a0705c629d2b396675d31c6dc7245efe94fd18f1cd5835945e7f9cd01f2f243
+ur=ur:envelope/lstpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgoycsfztpsotngdgmgwhflfadhddepaimkerychmnvttyleatahswdttdqdmtiohlehswuojpfewswlgwttmycetllshkfevdytsnadwzwzfxiojkcega
+digest=df66c756d2b52a1be81a0886ec17a27f7d6149bbc7c02fbddee4b7e7cb9b17d3
+xid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+reference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+isEmpty=false
+keys=1
+inception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8 private
+resolution=
+services=
+delegates=
+attachments=0
+edges=0
+provenance=ur:provenance/lfadhddepaimkerychmnvttyleatahswdttdqdmtiohlehswuojpfewswlgwttmycetllshkfevdytsnadwzwzfxdtotdevt
+generator=nextSeq=1
+roundtrip=false
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc privateKeyBase:7eb559bb genesis(quartile "test" 2025-01-01T00:00:00Z info) [omit/omit/none]
+format=XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': 1347571542([2, h'b16a7cbd178ee0d41cadb0dcefdbe87d121f8c3a62db62944dc8b28f906d09c677bfaacc5df3913d1bd90b796641e55c29f6be13695f44f8c2caaaba35596d913bbb'])
+]
+cbor=d8c883d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846a11840d8c9da50524f5682025842b16a7cbd178ee0d41cadb0dcefdbe87d121f8c3a62db62944dc8b28f906d09c677bfaacc5df3913d1bd90b796641e55c29f6be13695f44f8c2caaaba35596d913bbb
+ur=ur:envelope/lstpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgoycsfztpsotngdgmgwhflfaohdfwpaimkerychmnvttycepmpfuowsuyvskibgctlkftiduyidmwgtspprmymhjnasswktrspksfhlwfmefscwtabdkkiyfpvwhhdtynrnbwinhefyyasasgpkrdechkjnmefrrktkghashg
+digest=d3a92760ae9e3f4310fc4d45e8cdb1b918a53951ce91d9e558218db8a1e130ac
+xid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+reference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+isEmpty=false
+keys=1
+inception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8 private
+resolution=
+services=
+delegates=
+attachments=0
+edges=0
+provenance=ur:provenance/lfaohdfwpaimkerychmnvttycepmpfuowsuyvskibgctlkftiduyidmwgtspprmymhjnasswktrspksfhlwfmefscwtabdkkiyfpvwhhdtynrnbwinhefyyasasgpkrdechkjnmefrrkgwfxlybt
+generator=nextSeq=1
+roundtrip=false
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc privateKeyBase:7eb559bb genesis(high "test" 2025-01-01T00:00:00Z info) [omit/omit/none]
+format=XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': 1347571542([3, h'b16a7cbd178ee0d41cadb0dcefdbe87d6a41c85b41c551134ae8307f9203babc66e7ef6821f5fe3f4ac9b4754e64c3789845a661e394ab354808269d8ad1a118d3f44b8103daf8fabcf55cbdfe28341be4b99680d20ca00a5710da72032848ead9d5c39a0b5367c50fb00553d492a2a219a6'])
+]
+cbor=d8c883d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca11840d8c9da50524f5682035872b16a7cbd178ee0d41cadb0dcefdbe87d6a41c85b41c551134ae8307f9203babc66e7ef6821f5fe3f4ac9b4754e64c3789845a661e394ab354808269d8ad1a118d3f44b8103daf8fabcf55cbdfe28341be4b99680d20ca00a5710da72032848ead9d5c39a0b5367c50fb00553d492a2a219a6a10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846
+ur=ur:envelope/lstpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoycsfztpsotngdgmgwhflfaxhdjppaimkerychmnvttycepmpfuowsuyvskiimfpsphpfpskgybwgevsdylbmoaxrdrfiyvdwsisclykzefhgesoqzkpgliesrksmkfeolhsvlmwpyecfdaydsntlettoycstewkgrlyaxtnyazsrfykhhryzedeeecwverhmtlatdbnnbbkhgbetnjpaxdefdwdtatlsrnybdguioskbspfahgutymooeoecfoloyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgfmprwkox
+digest=a8b3378da64ec25a2dbbfc638400cf307351e962483d5a0250a0bdd57529590c
+xid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+reference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+isEmpty=false
+keys=1
+inception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8 private
+resolution=
+services=
+delegates=
+attachments=0
+edges=0
+provenance=ur:provenance/lfaxhdjppaimkerychmnvttycepmpfuowsuyvskiimfpsphpfpskgybwgevsdylbmoaxrdrfiyvdwsisclykzefhgesoqzkpgliesrksmkfeolhsvlmwpyecfdaydsntlettoycstewkgrlyaxtnyazsrfykhhryzedeeecwverhmtlatdbnnbbkhgbetnjpaxdefdwdtatlsrnybdguioskbspfahgutymooeoecfolurehvtbk
+generator=nextSeq=1
+roundtrip=false
+verify=throw:ENVELOPE_NOT_SIGNED",
+  "## doc privateKeyBase:7eb559bb genesis(quartile ffffffff 2025-01-01T00:00:00Z) [omit/omit/none]
+format=XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': 1347571542([2, h'af9613760f72635fbdb44a5a0a63c39f479aacdc37011f5a18361a9688740bc993d577c947229dcd7c5aeed35bb54771e29c3d2804742006c020'])
+]
+cbor=d8c883d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca11840d8c9da50524f568202583aaf9613760f72635fbdb44a5a0a63c39f479aacdc37011f5a18361a9688740bc993d577c947229dcd7c5aeed35bb54771e29c3d2804742006c020a10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846
+ur=ur:envelope/lstpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoycsfztpsotngdgmgwhflfaohdftpemtbwkobsjpiaheryqzgehtbkiasrneflnypsuoemadcthtcsencymtlojybdsomutlktsoflcpntsnkehtwytehprefljsvonsfsdeaajycxamrtcxoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgwfrffdhh
+digest=b11342e11bf451387455d7ef99a39634d129a17990e6ed8495366874e93bd87b
+xid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+reference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c
+isEmpty=false
+keys=1
+inception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8 private
+resolution=
+services=
+delegates=
+attachments=0
+edges=0
+provenance=ur:provenance/lfaohdftpemtbwkobsjpiaheryqzgehtbkiasrneflnypsuoemadcthtcsencymtlojybdsomutlktsoflcpntsnkehtwytehprefljsvonsfsdeaajycxamrtcxskcetnsn
+generator=nextSeq=1
+roundtrip=false
+verify=throw:ENVELOPE_NOT_SIGNED",
+]
+`;

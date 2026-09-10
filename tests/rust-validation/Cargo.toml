@@ -1,0 +1,17 @@
+[package]
+name = "xid-validation"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+bc-xid = { path = "../../../../Rust/bc-xid-rust" }
+bc-envelope = { version = "0.43", features = ["multithreaded"] }
+bc-components = "0.31"
+provenance-mark = { version = "0.24", features = ["envelope"] }
+known-values = "0.15"
+bc-ur = "0.19"
+dcbor = "0.25"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
