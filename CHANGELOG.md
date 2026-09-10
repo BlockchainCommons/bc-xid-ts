@@ -1,0 +1,107 @@
+# Changelog
+
+## 1.0.0-beta.1
+
+Extracted from the [`paritytech/bcts`](https://github.com/paritytech/bcts) monorepo, where this library was published as `@bcts/xid`. The public API is unchanged; see [MIGRATION.md](./MIGRATION.md).
+
+---
+
+## History as `@bcts/xid`
+
+## [1.0.0-beta.6] - 2026-07-29
+
+### Changed
+
+- Workspace version bump
+
+## [1.0.0-beta.5] - 2026-07-01
+
+### Changed
+
+- Workspace version bump
+
+## [1.0.0-beta.4] - 2026-06-28
+
+### Changed
+
+- Dependency sync
+
+## [1.0.0-beta.3] - 2026-06-22
+
+### Changed
+
+- Dependencies bump
+
+## [1.0.0-beta.2] - 2026-06-16
+
+### Changed
+
+- Dependencies bump
+
+## [1.0.0-beta.1] - 2026-05-27
+
+### Added
+
+- `XIDDocument.extraAssertions()` accessor exposing preserved extension assertions (synced with `bc-xid` v0.23.0).
+
+### Changed
+
+- `XIDDocument` now preserves unrecognized top-level assertions through parse → mutate → serialize round-trips instead of throwing `UNEXPECTED_PREDICATE`. `equals()` and `clone()` account for the preserved assertions.
+- `XIDDocument.isEmpty()` now also accounts for services, attachments, edges, and extension assertions.
+
+## [1.0.0-beta.0] - 2026-04-27
+
+### Changed
+
+- Workspace version bump
+
+## [1.0.0-alpha.23] - 2026-04-24
+
+### Changed
+
+- Removed redundant `as unknown as EnvelopeEncodableValue` casts in `key.ts`, `provenance.ts`, `service.ts`, and `xid-document.ts` now that `KnownValue` satisfies `EnvelopeEncodableValue` directly.
+- Simplified the `Provenance` envelope-locking path in `provenance.ts` by dropping the unused intermediate cast around `lockSubject`.
+
+## [1.0.0-alpha.22] - 2026-03-01
+
+### Changed
+
+- Workspace version bump
+
+## [1.0.0-alpha.21] - 2026-02-27
+
+### Changed
+
+- Workspace version bump
+
+## [1.0.0-alpha.20] - 2026-02-12
+
+### Changed
+
+- Updated edge tests per BCR-2026-003: claim detail now placed on target object instead of edge subject
+
+## [1.0.0-alpha.19] - 2026-02-05
+
+### Changed
+
+- Workspace version bump
+
+## [1.0.0-alpha.18] - 2025-01-31
+
+### Added
+
+- **Edge support**: `XIDDocument` now supports edges via `@bcts/envelope` edge extension, including `addEdge()`, `removeEdge()`, `edges()`, `findEdges()` methods
+- **Attachment support**: `XIDDocument` now supports attachments via `@bcts/envelope` attachment extension
+- **Edge test suite** (`tests/edge.test.ts`): Comprehensive tests for edge creation, querying, and removal in XID documents
+- **Signing options**: New `signingPrivateKey` signing option type for direct `SigningPrivateKey` usage
+- **Key encryption tests**: Expanded tests for encrypting and decrypting private keys with passwords (Argon2id, PBKDF2, Scrypt)
+- **Provenance encryption tests**: Tests for encrypting/decrypting provenance generators with passwords
+
+### Changed
+
+- **XIDDocument**: Major expansion of the XID document implementation for Rust parity, including support for signed envelopes, key management, service endpoints, provenance marks, delegate management, and resolution management
+- **Key module**: Enhanced key encryption/decryption with support for multiple password derivation methods
+- **Provenance module**: Enhanced provenance mark management with encryption support
+- **Service module**: Improved service endpoint handling
+- **XIDSigningOptions**: Replaced `privateKeyBase` option with `signingPrivateKey` for more direct signing control
+- **Test timeouts**: Increased timeout for password-derivation tests to 30 seconds across `key.test.ts`, `edge.test.ts`, `provenance.test.ts`, and `xid-document.test.ts`
