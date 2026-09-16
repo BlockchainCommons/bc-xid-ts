@@ -1,30 +1,112 @@
-# Rust validation harness
+# Rust reference cross-validation
 
-Replays `tests/vectors/vectors.json` (203 vectors: seeded documents with every
-inception kind, key scheme, privilege, delegate form, service shape,
-attachments, edges, custom assertions and genesis marks, rendered with every
-private-key, generator and signing option; decodes of every golden UR with
-each verification mode; mutation scripts; keys and provenance values on
-their own; the privilege table) against the reference crate `bc-xid` 0.23.0
-(a path dependency on `../../../Rust/bc-xid-rust`).
+Replays `tests/vectors/vectors.json` against the `bc-xid` reference: the
+published `bc-xid` 0.23.0 crate from crates.io (sources `bc-xid-rust`
+commit `e64924eb`) over the published `bc-envelope` 0.43.0,
+`bc-components` 0.31.1, `provenance-mark` 0.24.0, `known-values` 0.15.5,
+`bc-ur` 0.19.2 and `dcbor` 0.25.2. Nothing is patched. The toolchain is
+pinned (`rust-toolchain.toml`: 1.98.1).
 
 ```sh
 cd tests/rust-validation
-cargo run --release -- ../vectors/vectors.json
-VERBOSE=1 cargo run --release -- ../vectors/vectors.json   # print every expected divergence
-DUMP=/tmp/rust.json cargo run --release -- ../vectors/vectors.json   # write every Rust outcome by name
+cargo run --release --offline -- ../vectors/vectors.json
+VERBOSE=1 cargo run --release --offline -- ../vectors/vectors.json   # full outcomes in mismatch reports
+DUMP=/tmp/rust.json cargo run --release --offline -- ../vectors/vectors.json   # every reference outcome by name
 ```
 
-The program exits 1 on any `MISMATCH`. Differences that are understood are
-classified (see `RUST_DIVERGENCES.md` at the package root):
+Result line on 2026-09-16:
 
-| Class | Meaning |
+```
+371 vectors - 353 match, 3 panic-mapped, 15 js-only (J3 12, J4 3), 0 unparsable, 0 MISMATCH
+```
+
+## What is compared
+
+Every recipe (`tests/vectors/recipes.ts`) yields one outcome string on
+each side and the two are compared textually. The TypeScript outcome is
+the vector's `expect`, materialised by `scripts/generate-vectors.mjs` with
+the working tree (`tests/vectors/working-tree-adapter.ts`); the
+reference's is computed by `src/main.rs`.
+
+- Documents (`doc`): the format string, the tagged CBOR, UR and digest
+  where the output is deterministic, the XID, reference, emptiness,
+  counts, resolution methods, services, delegates, provenance, generator,
+  a re-parse (`roundtrip`) and an inception-key verification (`verify`).
+- `decode` (a UR into `fromEnvelope` with each verification mode),
+  `mutate` (scripts of mutations with their results), `key` and
+  `provenance` values with each private-key and generator option, the
+  privilege table.
+- Hand-assembled envelopes: `docEnvelope`, `keyEnvelope`,
+  `serviceEnvelope`, `provenanceEnvelope` build the exact envelope on
+  both sides (leaves, known values, references, keys, salts, marks,
+  generators, nodes, wrapped, elided and signed envelopes; assertions
+  with assertions on them) and give it to the parser.
+- `cbor`: bytes given to the tagged decoder (`fromCbor`, the codec) and
+  the untagged one (`fromUntaggedCbor`); `ur`: a UR string given to
+  `fromUR` in the reference's three steps (the UR grammar, the type check
+  flattened into `dcbor::Error::Custom`, the decoder).
+- `nickname`: `addNickname`/`setNickname` in sequence; `construct`: a
+  caller's input to a constructor (URIs, hex references).
+- A rejection is `throw:<code>[<inner code>]|<message>`: the reference's
+  error variant, the variant it wraps for `EnvelopeParsing`, `Component`,
+  `Cbor` and `ProvenanceMark`, and its `Display`. A decoder entry point
+  (`fromCbor`, `fromUntaggedCbor`, `fromUR`) returns the dcbor error itself
+  in the reference, so its row reads `throw:Cbor[<dcbor variant>]|<dcbor
+  message>`; inside `fromEnvelope` the wrapping variant's own `Display`
+  (`envelope parsing error`, `CBOR error`, …) is the message. A
+  constructor's own input passes the components error through
+  (`throw:InvalidData|invalid URI: invalid URI format`).
+- The harness pins the known-values directory configuration first
+  (`set_directory_config(DirectoryConfig::new())`), as the test setup file
+  and the generator pin the port's, so no row reads the runner's home
+  directory; then registers envelope's and provenance-mark's tags, as the
+  setup file does.
+- Where the reference panics at a call the port rejects with a typed
+  error (`Reference::from_hex` unwraps the hex decode and the size
+  check), `PANIC_MAPPED` in `src/main.rs` names the port's code and the
+  row is `panic-mapped`, compared by code only.
+- `domain` rows are the JavaScript input domain (`js-only`), in two
+  classes here: J3 a value the reference's types cannot express (a `null`
+  where private keys go, a genesis without a source or with a seed of the
+  wrong length, an invalid `Date`, an unknown option string, a missing
+  inception key) and J4 a reference surface the port reaches differently
+  (`random` with a genesis, the default delegate parser, a generator
+  given together with a password).
+- A recipe field this program cannot read is `unparsable`. An unhandled
+  panic, or any other difference, is a MISMATCH. Both make the process
+  exit 1.
+
+## Rows that guard the sibling packages
+
+| Sibling behaviour | Rows |
 |---|---|
-| `D1` | `roundtrip`: TypeScript's `equals` ignores private-key and generator material; the reference compares it. |
-| `S1` | `ECPublicKey(…)` summary: 16 hex characters and an ellipsis here, the 8-character short reference there (a bc-components-ts rendering convention). |
-| `S2` | `SigningPrivateKey(…)` / `EncapsulationPrivateKey(…)` summaries: the inner key is rendered with the outer reference or its raw bytes here, with its own short reference there (bc-components-ts). |
-| `E1` | An error that is not an `XIDError` (a UR or envelope parse failure) is reported by message; the reference words it differently. |
+| envelope: identical assertions are added once; attachments are validated; `NotLeaf`, `NotWrapped`, `AmbiguousPredicate`, `NonexistentPredicate`, `NotKnownValue` inside a document | `docEnvelope … +'delegate':{…},'delegate':{…}`, `docEnvelope … +'attachment':"x"`, the `docEnvelope`/`keyEnvelope`/`serviceEnvelope` rejection rows |
+| components: `Reference` rendering (`Reference(<short hex>)`), URI validity, XID and reference sizes, hex decoding | `docEnvelope … +'service':…['key':ref(e9f1ab8b…)]`, the `construct` rows, `cbor untagged 581f…` |
+| dcbor: tag and type errors named as the reference names them | the `cbor` rows |
+| provenance-mark: mark decoding, generator envelopes, seed length | `provenanceEnvelope` rows, `domain genesis.seed.*` |
+| bc-ur: grammar and type errors | the `ur` rows |
 
-Error codes: the TypeScript `XIDError.code` is the reference's `Error`
-variant name in `SCREAMING_SNAKE_CASE` (`KeyNotFoundInDocument` →
-`KEY_NOT_FOUND_IN_DOCUMENT`), so codes compare directly.
+## Self-checks
+
+`mismatch.json` holds one row with a value flipped; the run must exit 1
+with `1 MISMATCH`. `fixtures/classes.json` holds one row per class and
+must count them as `1 match, 1 panic-mapped, 2 js-only (J3 1, J4 1)`;
+`fixtures/malformed.json` has a recipe kind this program cannot read (`1
+unparsable`) and must exit 1.
+
+## CI
+
+The `rust-validation` job in `.github/workflows/ci.yml` points `HOME` at an
+empty directory, checks the golden file against the working tree
+(`bun run test:golden`), builds the harness against the pinned crates and
+toolchain (`cargo run --locked --offline` after `cargo fetch --locked`),
+runs the golden file, then the mismatch and class fixtures. A MISMATCH
+anywhere fails the job.
+
+## Maintenance
+
+When the reference moves: update the pins in `Cargo.toml`, run
+`cargo update -p bc-xid`, check the toolchain pin, regenerate the vectors
+(`bun run vectors:generate`), run the replay and copy the result line
+above. A new difference is a bug on one side: fix it, or add the js-only
+class or the panic mapping with its reason in `src/main.rs` and here.

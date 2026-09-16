@@ -1047,13 +1047,17 @@ describe("XIDDocument", () => {
       expect(xidDocument.hasAttachments).toBe(false);
 
       // Add an attachment with vendor and conformance metadata
-      xidDocument.addAttachment("test_data", "com.example", "com.example.schema.v1");
+      xidDocument.addAttachment({
+        payload: "test_data",
+        vendor: "com.example",
+        conformsTo: "com.example.schema.v1",
+      });
 
       // Document should now have attachments
       expect(xidDocument.hasAttachments).toBe(true);
 
       // Add another attachment
-      xidDocument.addAttachment(new Uint8Array([1, 2, 3, 4, 5]), "org.test");
+      xidDocument.addAttachment({ payload: new Uint8Array([1, 2, 3, 4, 5]), vendor: "org.test" });
 
       // Convert to envelope and round-trip
       const envelope = xidDocument.toEnvelope({ privateKeys: "include" });
@@ -1077,8 +1081,12 @@ describe("XIDDocument", () => {
       const password = new TextEncoder().encode("test_password");
 
       // Add attachments
-      xidDocument.addAttachment("metadata_value", "com.test", "schema.v1");
-      xidDocument.addAttachment(42, "org.example");
+      xidDocument.addAttachment({
+        payload: "metadata_value",
+        vendor: "com.test",
+        conformsTo: "schema.v1",
+      });
+      xidDocument.addAttachment({ payload: 42, vendor: "org.example" });
 
       expect(xidDocument.hasAttachments).toBe(true);
 
@@ -1100,11 +1108,11 @@ describe("XIDDocument", () => {
       });
 
       // Add attachments before signing
-      xidDocument.addAttachment(
-        "signed_data",
-        "com.example.signed",
-        "com.example.signed.schema.v1",
-      );
+      xidDocument.addAttachment({
+        payload: "signed_data",
+        vendor: "com.example.signed",
+        conformsTo: "com.example.signed.schema.v1",
+      });
 
       // Sign the document with inception key - attachments should be inside the signature
       const envelope = xidDocument.toEnvelope({ privateKeys: "include", sign: "inception" });
@@ -1117,7 +1125,7 @@ describe("XIDDocument", () => {
       expect(xidDocument2.hasAttachments).toBe(true);
 
       // Verify we can add more attachments and re-sign
-      xidDocument2.addAttachment("additional_data", "com.example.more");
+      xidDocument2.addAttachment({ payload: "additional_data", vendor: "com.example.more" });
 
       const envelope3 = xidDocument2.toEnvelope({ privateKeys: "include", sign: "inception" });
 

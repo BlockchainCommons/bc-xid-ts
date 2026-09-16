@@ -1,15 +1,16 @@
 /**
- * Golden snapshot (Phase 0.2): the reference documents, every output option,
+ * Golden snapshot: the reference documents, every output option,
  * the decodes, the mutation scripts and the privilege table. Reviewable,
  * auto-updatable with -u.
  */
 import { describe, it, expect } from "vitest";
-import { materialize, redesignedAdapterFor, recipeName } from "./vectors/recipes";
+import { materialize, recipeName } from "./vectors/recipes";
+import { workingTreeAdapterFor } from "./vectors/working-tree-adapter";
 import { currentDeps, currentModule } from "./vectors/deps";
 import { materializedFrom } from "./vectors/materialized";
 import { referenceDocs, decodeRecipes, mutateRecipes } from "./corpus/corpus";
 
-const api = redesignedAdapterFor(await currentModule(), currentDeps);
+const api = workingTreeAdapterFor(await currentModule(), currentDeps);
 const m = materializedFrom(api);
 
 describe("golden", () => {

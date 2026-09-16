@@ -1,11 +1,11 @@
 # Frozen baseline build
 
 `xid-baseline.mjs` is the self-contained ESM bundle of `@blockchaincommons/xid` built from
-commit `c1425268d9c23764aaf396fb2c77f66475f4a434`, the pre-redesign wire-format reference. It is built from
-the PUBLISHED pre-redesign packages (`@bcts/xid` 1.0.0-beta.6 and its closure,
+commit `c1425268d9c23764aaf396fb2c77f66475f4a434`, the wire-format reference before this package's API. It is built from
+the PUBLISHED `@bcts` packages (`@bcts/xid` 1.0.0-beta.6 and its closure,
 pinned by tests/baseline/package.json), so every sibling is inlined exactly
 once, with the behaviour consumers had.
-`xid-baseline.d.mts` is the public surface at that commit (Phase 0.5).
+`xid-baseline.d.mts` is the public surface at that commit.
 
 `tests/differential.test.ts` runs every corpus recipe through this bundle and
 the working tree and asserts identical outcomes; it pins the sha256 below so

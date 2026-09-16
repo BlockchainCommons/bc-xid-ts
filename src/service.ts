@@ -5,8 +5,7 @@
  * reached through, a capability, a name and permissions.
  */
 
-// Ported from bc-xid-rust/src/service.rs
-
+import { expectText } from "@blockchaincommons/dcbor";
 import { Envelope } from "@blockchaincommons/envelope";
 import { KEY, DELEGATE, NAME, CAPABILITY, ALLOW } from "@blockchaincommons/known-values";
 import { Reference, URI, type PublicKeys, type XID } from "@blockchaincommons/components";
@@ -14,16 +13,28 @@ import { Reference, URI, type PublicKeys, type XID } from "@blockchaincommons/co
 import { Permissions, type HasPermissions } from "./permissions";
 import { type Privilege, privilegeFromEnvelope } from "./privilege";
 import { XIDError } from "./error";
+import { guarded, leafAs } from "./domain";
 
 /** What `Service.from` takes besides the URI. */
 export interface ServiceInput {
+  /** The capability (`addCapability`). */
   capability?: string | undefined;
+  /** The name (`setName`). */
   name?: string | undefined;
+  /** The keys the service is reached through, by reference. */
   keyReferences?: Iterable<Reference> | undefined;
+  /** The delegates the service is reached through, by reference. */
   delegateReferences?: Iterable<Reference> | undefined;
+  /** The permissions; empty unless given. */
   permissions?: Permissions | undefined;
 }
 
+/**
+ * A service of a XID document: a URI, key and delegate references, a
+ * capability, a name and permissions. On the wire only `'allow'`
+ * permissions round-trip: the parser rejects `'deny'` as the reference's
+ * does.
+ */
 export class Service implements HasPermissions {
   private readonly _uri: URI;
   private readonly _keyReferences: Map<string, Reference>;
@@ -48,7 +59,10 @@ export class Service implements HasPermissions {
     this._name = name;
   }
 
-  /** A service at a URI; references and permissions can be added later. */
+  /**
+   * A service at a URI (a components error for text that is not a URI);
+   * references and permissions can be added later.
+   */
   static from(
     uri: URI | string,
     { capability, name, keyReferences, delegateReferences, permissions }: ServiceInput = {},
@@ -68,14 +82,17 @@ export class Service implements HasPermissions {
     return service;
   }
 
+  /** The URI. */
   get uri(): URI {
     return this._uri;
   }
 
+  /** The capability; empty when there is none. */
   get capability(): string {
     return this._capability;
   }
 
+  /** Sets (or clears, with `""`) the capability. */
   setCapability(capability: string): void {
     this._capability = capability;
   }
@@ -87,21 +104,24 @@ export class Service implements HasPermissions {
     this._capability = capability;
   }
 
+  /** The key references (a copy). */
   get keyReferences(): ReadonlySet<Reference> {
     return new Set(this._keyReferences.values());
   }
 
+  /** Whether the service references this key. */
   hasKeyReference(reference: Reference): boolean {
     return this._keyReferences.has(reference.toHex());
   }
 
-  /** `Duplicate` when the reference is already there. */
+  /** Adds a key reference; `Duplicate` when it is already there. */
   addKeyReference(keyReference: Reference): void {
     const key = keyReference.toHex();
     if (this._keyReferences.has(key)) throw XIDError.duplicate("key reference");
     this._keyReferences.set(key, keyReference);
   }
 
+  /** Adds a key reference given as 64 hex characters (a components error otherwise). */
   addKeyReferenceHex(keyReferenceHex: string): void {
     this.addKeyReference(Reference.fromHex(keyReferenceHex));
   }
@@ -111,20 +131,24 @@ export class Service implements HasPermissions {
     this.addKeyReference(key.publicKeys.reference());
   }
 
+  /** The delegate references (a copy). */
   get delegateReferences(): ReadonlySet<Reference> {
     return new Set(this._delegateReferences.values());
   }
 
+  /** Whether the service references this delegate. */
   hasDelegateReference(reference: Reference): boolean {
     return this._delegateReferences.has(reference.toHex());
   }
 
+  /** Adds a delegate reference; `Duplicate` when it is already there. */
   addDelegateReference(delegateReference: Reference): void {
     const key = delegateReference.toHex();
     if (this._delegateReferences.has(key)) throw XIDError.duplicate("delegate reference");
     this._delegateReferences.set(key, delegateReference);
   }
 
+  /** Adds a delegate reference given as 64 hex characters (a components error otherwise). */
   addDelegateReferenceHex(delegateReferenceHex: string): void {
     this.addDelegateReference(Reference.fromHex(delegateReferenceHex));
   }
@@ -134,6 +158,7 @@ export class Service implements HasPermissions {
     this.addDelegateReference(delegate.xid.reference());
   }
 
+  /** The name; empty when there is none. */
   get name(): string {
     return this._name;
   }
@@ -145,14 +170,17 @@ export class Service implements HasPermissions {
     this._name = name;
   }
 
+  /** The permissions (live). */
   get permissions(): Permissions {
     return this._permissions;
   }
 
+  /** Allows `privilege`. */
   allow(privilege: Privilege): void {
     this._permissions.addAllow(privilege);
   }
 
+  /** Denies `privilege` (written to the wire, but not read back: see the class). */
   deny(privilege: Privilege): void {
     this._permissions.addDeny(privilege);
   }
@@ -171,36 +199,34 @@ export class Service implements HasPermissions {
     return this._permissions.addToEnvelope(envelope);
   }
 
-  /** Rejects nested assertions and any predicate but the five above. */
+  /**
+   * A service from its envelope. Rejects nested assertions
+   * (`UnexpectedNestedAssertions`) and any predicate but `'key'`,
+   * `'delegate'`, `'capability'`, `'name'` and `'allow'`
+   * (`UnexpectedPredicate`; a predicate that is not a known value is
+   * `EnvelopeParsing`); a subject or object of the wrong type is `Cbor`.
+   */
   static fromEnvelope(envelope: Envelope): Service {
-    const uri = URI.fromCbor(envelope.subject().expectLeaf());
+    const uri = leafAs(envelope.subject(), (c) => URI.fromCbor(c));
     const service = Service.from(uri);
     for (const assertion of envelope.assertions()) {
-      const knownValue = assertion.expectPredicate().expectKnownValue();
-      const object = assertion.expectObject();
+      const knownValue = guarded(() => assertion.expectPredicate().expectKnownValue());
+      const object = guarded(() => assertion.expectObject());
       if (object.hasAssertions()) throw XIDError.unexpectedNestedAssertions();
       const predicate = knownValue.value;
       switch (predicate) {
         case KEY.value:
-          service.addKeyReference(Reference.fromCbor(object.expectLeaf()));
+          service.addKeyReference(leafAs(object, (c) => Reference.fromCbor(c)));
           break;
         case DELEGATE.value:
-          service.addDelegateReference(Reference.fromCbor(object.expectLeaf()));
+          service.addDelegateReference(leafAs(object, (c) => Reference.fromCbor(c)));
           break;
-        case CAPABILITY.value: {
-          const capability = object.asText();
-          if (capability === undefined) {
-            throw XIDError.envelopeParsing(new Error("capability is not text"));
-          }
-          service.addCapability(capability);
+        case CAPABILITY.value:
+          service.addCapability(leafAs(object, expectText));
           break;
-        }
-        case NAME.value: {
-          const name = object.asText();
-          if (name === undefined) throw XIDError.envelopeParsing(new Error("name is not text"));
-          service.setName(name);
+        case NAME.value:
+          service.setName(leafAs(object, expectText));
           break;
-        }
         case ALLOW.value:
           service._permissions.addAllow(privilegeFromEnvelope(object));
           break;
@@ -224,6 +250,7 @@ export class Service implements HasPermissions {
     return this._permissions.equals(other._permissions);
   }
 
+  /** A copy. */
   clone(): Service {
     return new Service(
       this._uri,

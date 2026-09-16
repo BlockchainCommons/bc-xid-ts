@@ -1,10 +1,15 @@
 {
   "name": "@blockchaincommons/xid",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "type": "module",
   "sideEffects": false,
   "description": "Blockchain Commons XID for TypeScript",
   "license": "BSD-2-Clause-Patent",
+  "author": {
+    "name": "Blockchain Commons",
+    "email": "info@blockchaincommons.com",
+    "url": "https://www.blockchaincommons.com"
+  },
   "homepage": "https://github.com/BlockchainCommons/bc-xid-ts",
   "repository": {
     "type": "git",
@@ -55,6 +60,7 @@
     "api:check": "bun scripts/api-snapshot.mjs --check && node scripts/api-report.mjs",
     "clean": "rm -rf dist",
     "docs": "typedoc",
+    "bench": "bun bench/benchmark.mjs",
     "postinstall": "node scripts/pin-lint-typescript.mjs",
     "prepublishOnly": "npm run build",
     "lint:pkg": "publint && attw --pack . --profile node16",
@@ -77,9 +83,19 @@
   "engines": {
     "node": ">=22.12"
   },
+  "dependencies": {
+    "@blockchaincommons/components": "^1.0.0-beta.3",
+    "@blockchaincommons/dcbor": "^1.0.0-beta.3",
+    "@blockchaincommons/envelope": "^1.0.0-beta.3",
+    "@blockchaincommons/known-values": "^1.0.0-beta.3",
+    "@blockchaincommons/provenance-mark": "^1.0.0-beta.2",
+    "@blockchaincommons/rand": "^1.0.0-beta.3",
+    "@blockchaincommons/tags": "^1.0.0-beta.3",
+    "@blockchaincommons/uniform-resources": "^1.0.0-beta.3"
+  },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
-    "@blockchaincommons/rand": "^1.0.0-beta.1",
+    "@blockchaincommons/rand": "^1.0.0-beta.3",
     "@eslint/js": "^10.0.1",
     "@microsoft/api-extractor": "^7.58.9",
     "@size-limit/preset-small-lib": "^13.0.3",
@@ -97,15 +113,5 @@
     "typescript": "^7.0.2",
     "typescript6": "npm:typescript@^6.0.3",
     "vitest": "^4.1.10"
-  },
-  "dependencies": {
-    "@blockchaincommons/components": "^1.0.0-beta.1",
-    "@blockchaincommons/dcbor": "^1.0.0-beta.1",
-    "@blockchaincommons/envelope": "^1.0.0-beta.1",
-    "@blockchaincommons/known-values": "^1.0.0-beta.1",
-    "@blockchaincommons/provenance-mark": "^1.0.0-beta.1",
-    "@blockchaincommons/rand": "^1.0.0-beta.1",
-    "@blockchaincommons/tags": "^1.0.0-beta.1",
-    "@blockchaincommons/uniform-resources": "^1.0.0-beta.1"
   }
 }

@@ -5,8 +5,6 @@
  * the known-value names the reference uses.
  */
 
-// Ported from bc-xid-rust/src/privilege.rs
-
 import {
   type KnownValue,
   PRIVILEGE_ALL,
@@ -27,6 +25,7 @@ import {
 import { Envelope } from "@blockchaincommons/envelope";
 
 import { XIDError } from "./error";
+import { guarded } from "./domain";
 
 /**
  * `All` grants every privilege; the operational ones (`Auth`, `Sign`,
@@ -50,7 +49,8 @@ export type Privilege =
   | "Burn"
   | "Revoke";
 
-export const PRIVILEGES: readonly Privilege[] = [
+/** Every privilege, in the reference's order. */
+export const PRIVILEGES: readonly Privilege[] = Object.freeze([
   "All",
   "Auth",
   "Sign",
@@ -65,7 +65,7 @@ export const PRIVILEGES: readonly Privilege[] = [
   "Elect",
   "Burn",
   "Revoke",
-];
+]);
 
 const KNOWN_VALUES: Record<Privilege, KnownValue> = {
   All: PRIVILEGE_ALL,
@@ -84,11 +84,12 @@ const KNOWN_VALUES: Record<Privilege, KnownValue> = {
   Revoke: PRIVILEGE_REVOKE,
 };
 
+/** Whether `value` is one of the privilege names. */
 export function isPrivilege(value: unknown): value is Privilege {
   return (PRIVILEGES as readonly unknown[]).includes(value);
 }
 
-/** The known value the privilege is encoded as. */
+/** The known value the privilege is encoded as; `UnknownPrivilege` for a name that is not one. */
 export function privilegeKnownValue(privilege: Privilege): KnownValue {
   const kv = KNOWN_VALUES[privilege] as KnownValue | undefined;
   if (kv === undefined) throw XIDError.unknownPrivilege();
@@ -107,9 +108,12 @@ export function privilegeEnvelope(privilege: Privilege): Envelope {
   return Envelope.knownValue(privilegeKnownValue(privilege));
 }
 
-/** The privilege a known-value envelope names. */
+/**
+ * The privilege a known-value envelope names: `EnvelopeParsing` when the
+ * subject is not a known value, `UnknownPrivilege` when it names no
+ * privilege.
+ */
 export function privilegeFromEnvelope(envelope: Envelope): Privilege {
-  const c = envelope.case;
-  if (c.type !== "knownValue") throw XIDError.unknownPrivilege();
-  return privilegeFromKnownValue(c.value);
+  const knownValue = guarded(() => envelope.subject().expectKnownValue());
+  return privilegeFromKnownValue(knownValue);
 }

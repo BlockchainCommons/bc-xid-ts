@@ -5,8 +5,6 @@
  * `'allow'`/`'deny'` assertions.
  */
 
-// Ported from bc-xid-rust/src/permissions.rs
-
 import { ALLOW, DENY } from "@blockchaincommons/known-values";
 import { Envelope } from "@blockchaincommons/envelope";
 
@@ -14,17 +12,23 @@ import { type Privilege, privilegeFromEnvelope, privilegeKnownValue } from "./pr
 
 /** What `Permissions.from` takes. */
 export interface PermissionsInput {
+  /** The privileges allowed. */
   allow?: Iterable<Privilege> | undefined;
+  /** The privileges denied. */
   deny?: Iterable<Privilege> | undefined;
 }
 
 /** Something that carries permissions: a key, a delegate, a service. */
 export interface HasPermissions {
+  /** The permissions (live). */
   readonly permissions: Permissions;
+  /** Allows `privilege`. */
   allow(privilege: Privilege): void;
+  /** Denies `privilege`. */
   deny(privilege: Privilege): void;
 }
 
+/** An allow set and a deny set of privileges. */
 export class Permissions {
   private readonly _allow: Set<Privilege>;
   private readonly _deny: Set<Privilege>;
@@ -44,41 +48,53 @@ export class Permissions {
     return new Permissions(new Set<Privilege>(["All"]), new Set());
   }
 
+  /** The allowed privileges (a copy). */
   get allow(): ReadonlySet<Privilege> {
-    return this._allow;
+    return new Set(this._allow);
   }
 
+  /** The denied privileges (a copy). */
   get deny(): ReadonlySet<Privilege> {
-    return this._deny;
+    return new Set(this._deny);
   }
 
+  /** Allows `privilege`. */
   addAllow(privilege: Privilege): void {
     this._allow.add(privilege);
   }
 
+  /** Denies `privilege`. */
   addDeny(privilege: Privilege): void {
     this._deny.add(privilege);
   }
 
+  /** Stops allowing `privilege`. */
   removeAllow(privilege: Privilege): void {
     this._allow.delete(privilege);
   }
 
+  /** Stops denying `privilege`. */
   removeDeny(privilege: Privilege): void {
     this._deny.delete(privilege);
   }
 
+  /** Empties both sets. */
   clear(): void {
     this._allow.clear();
     this._deny.clear();
   }
 
-  /** Allowed (directly or through `All`) and not denied (directly or through `All`). */
+  /**
+   * Allowed (directly or through `All`) and not denied (directly or
+   * through `All`): a denial wins over an allowance. This is the
+   * package's own rule; the reference exposes the sets only.
+   */
   isAllowed(privilege: Privilege): boolean {
     if (this._deny.has(privilege) || this._deny.has("All")) return false;
     return this._allow.has(privilege) || this._allow.has("All");
   }
 
+  /** Denied directly or through `All`. */
   isDenied(privilege: Privilege): boolean {
     return this._deny.has(privilege) || this._deny.has("All");
   }
@@ -101,7 +117,11 @@ export class Permissions {
     return result;
   }
 
-  /** The `'allow'` and `'deny'` assertions of an envelope. */
+  /**
+   * The `'allow'` and `'deny'` assertions of an envelope. An object that
+   * is not a known value is `EnvelopeParsing`; one that names no
+   * privilege is `UnknownPrivilege`.
+   */
   static fromEnvelope(envelope: Envelope): Permissions {
     const allow = new Set<Privilege>();
     const deny = new Set<Privilege>();
@@ -110,6 +130,7 @@ export class Permissions {
     return new Permissions(allow, deny);
   }
 
+  /** Same allow and deny sets. */
   equals(other: Permissions): boolean {
     if (this._allow.size !== other._allow.size || this._deny.size !== other._deny.size)
       return false;
@@ -118,6 +139,7 @@ export class Permissions {
     return true;
   }
 
+  /** A copy. */
   clone(): Permissions {
     return new Permissions(new Set(this._allow), new Set(this._deny));
   }

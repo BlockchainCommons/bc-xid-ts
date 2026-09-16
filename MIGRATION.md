@@ -1,19 +1,46 @@
-# Migrating to the redesigned `@blockchaincommons/xid`
+# Migrating to `@blockchaincommons/xid`
+
+## 1.0.0-beta.2
+
+Every wire form is unchanged. What changed is what the package accepts,
+what it throws, and a few names:
+
+| Before | After |
+|---|---|
+| A sibling error (`EnvelopeError`, `ComponentsError`, `CborError`, `ProvenanceMarkError`) escaping from `fromEnvelope`, `Key.fromEnvelope`, `Service.fromEnvelope`, `Delegate.fromEnvelope`, `Provenance.fromEnvelope`, `codec.decode`, `fromUR` | an `XIDError` with code `EnvelopeParsing`, `Cbor` or `ProvenanceMark`; the sibling error is `cause`, its message `details.message`; the message is the reference's (`envelope parsing error`, `CBOR error`, `provenance mark error`) |
+| `InvalidXid` for a subject that is not a leaf; `InvalidResolutionMethod` for a `'dereferenceVia'` node; `UnknownPrivilege` for an `'allow'` that is not a known value; `EnvelopeParsing` for a non-text `'capability'`/`'name'` | `EnvelopeParsing`, `EnvelopeParsing`, `EnvelopeParsing`, `Cbor` (the reference's codes) |
+| `Key.fromEnvelope` reading two `'nickname'`s or a non-text one as `""` | `EnvelopeParsing` |
+| `error.details.reference` and the message: the full 64-hex reference | `Reference(<short hex>)` |
+| `XIDDocument.codec.decode(c)` accepting tagged and untagged CBOR; no `fromCbor` | `fromCbor(c)` (tag required; `codec.decode` is the same), `fromUntaggedCbor(c)` (untagged only) |
+| `XIDError.isXIDError(x)` by `name` and `code` | `instanceof`; `error.is(code)` narrows `details`; `XIDErrorTyped<C>`, `XIDErrorDetailsByCode` |
+| `XIDDocument.random({ rng }, genesis)` | `XIDDocument.random({ rng, genesis })` |
+| `inceptionPrivateKeysFromEnvelope(envelope, password)` | `inceptionPrivateKeysFromEnvelope(envelope, { password })` |
+| `addAttachment(payload, vendor, conformsTo)` | `addAttachment({ payload, vendor, conformsTo })` |
+| `Delegate.fromEnvelope(envelope, parseDocument)` | `Delegate.fromEnvelope(envelope)` (or `{ parseDocument }`) |
+| `provenance.takeGenerator()` returning the internal generator data | `takeGenerator()` returning whether a generator was held |
+| `PrivateKeyData`, `GeneratorData` exported | gone; `hasPrivateKeys`/`hasEncryptedPrivateKeys`, `hasGenerator`/`hasEncryptedGenerator` |
+| `permissions.allow`/`deny` returning the live sets | copies |
+| `Key.from(pub, { privateKeys: null })`, `genesis: {}`, a 40-byte seed (cut to 32), `new Date(NaN)`, `resolution: "bogus"`, `verify: "bogus"`, `privateKeys: "bogus"`, `sign: "bogus"`, `inceptionKey: undefined` | `TypeError`; a seed of the wrong length is `ProvenanceMark` |
+| `doc.attachments.len()`, `.isEmpty()`, `.iter()`; `doc.edges().len()` … | `size`, iteration (`for (const e of doc.edges())`): envelope's `Attachments`/`Edges` |
+| Formatting a document without registering tags | call `registerTags()` from `@blockchaincommons/provenance-mark` once (it registers envelope's summarisers too) |
+
+Added: `Key.addNickname` (sets once: `Duplicate`, `EmptyValue`); `XIDGenesis.seed` as a `ProvenanceSeed`.
+
+## 1.0.0-beta.1
 
 Every wire form — the document envelope and each key, delegate, service,
 provenance, attachment and edge assertion inside it, the private-key and
 generator forms (included with their salt, elided, password-locked),
 signatures, tagged CBOR and UR — is unchanged. This was proven against the
-published pre-redesign packages (`@bcts/xid` 1.0.0-beta.6 and its closure,
-frozen as `tests/baseline`; `tests/differential.test.ts`, zero differences
-outside the two tombstones below) and against `bc-xid-rust` 0.23.0
-(`tests/rust-validation`: 184 of 203 vectors byte-identical, the other 19
-the rendering conventions in `RUST_DIVERGENCES.md`).
+published `@bcts/xid` 1.0.0-beta.6 and its closure, frozen as
+`tests/baseline` (`tests/differential.test.ts`, no differences outside the
+tombstones it enumerates) and against `bc-xid-rust` 0.23.0
+(`tests/rust-validation`).
 
 Two behaviours moved toward the reference on the way:
 
-- **Attachments** rendered `'attachment': 'attachment': {…}` (the
-  pre-redesign envelope wrapped each stored attachment twice); they now
+- **Attachments** rendered `'attachment': 'attachment': {…}` (the frozen
+  bundle's envelope wrapped each stored attachment twice); they now
   render `'attachment': {…}` as the reference does.
 - **Equality** compared public content only; `XIDDocument.equals`,
   `Key.equals`, `Delegate.equals`, `Service.equals` and `Provenance.equals`
@@ -34,16 +61,16 @@ Two behaviours moved toward the reference on the way:
 | `findKeyByPublicKeys(p)` / `findKeyByReference(r)` / `findDelegateByXid(x)` / `findDelegateByReference(r)` / `findServiceByUri(u)` | `key(p)` / `keyByReference(r)` / `delegate(x)` / `delegateByReference(r)` / `service(u)` |
 | `checkContainsKey(p)` / `checkContainsDelegate(x)` / `checkServicesConsistency()` / `checkServiceConsistency(s)` | `expectKey(p)` / `expectDelegate(x)` / `expectServicesConsistent()` / `expectServiceConsistent(s)` (the first two return the item) |
 | `removeKey(p): void` / `removeDelegate(x): void` / `removeService(u): void` | return the removed item (`StillReferenced`/`NotFound` as before); `takeKey`/`takeDelegate`/`takeService` unchanged (unchecked, `undefined` when absent) |
-| `getAttachment(d)` | `attachment(d)` (`getEdge(d)` stays, `edge(d)` added) |
+| `getAttachment(d)` | `attachment(d)` (`getEdge(d)` stays for envelope's `Edgeable`, `edge(d)` added) |
 | `toEnvelope(privateKeyOptions, generatorOptions, signingOptions)` | `toEnvelope({ privateKeys?, generator?, sign? })` — `sign` is `"none"`, `"inception"` or a `Signer` |
 | `intoEnvelope()` | `toEnvelope()` (`ToEnvelope`) |
 | `toSignedEnvelope(signer)` / `toSignedEnvelopeOpt(signer, privateKeyOptions)` | `toSignedEnvelope(signer, { privateKeys? })` |
 | `fromEnvelope(envelope, password, verifySignature)` / `tryFromEnvelope(envelope)` | `fromEnvelope(envelope, { password?, verify?: "none" \| "inception" })` |
-| `extractInceptionPrivateKeysFromEnvelope(e, pw)` | `inceptionPrivateKeysFromEnvelope(e, pw)` |
+| `extractInceptionPrivateKeysFromEnvelope(e, pw)` | `inceptionPrivateKeysFromEnvelope(e, { password })` |
 | `privateKeyEnvelopeForKey(p, password)` | `privateKeyEnvelopeForKey(p, { password })` |
 | `nextProvenanceMarkWithEmbeddedGenerator(password, date, info)` / `nextProvenanceMarkWithProvidedGenerator(generator, date, info)` | `nextProvenanceMark({ date?, info?, password?, generator? })` |
 | `ur()` / `urString()` / `fromUR` / `fromURString(s)` | `toUR()` / `toUR().toString()` / `fromUR(ur)` / `fromUR(UR.parse(s))` |
-| `untaggedCbor()` / `fromUntaggedCbor(c)` | `untaggedCbor()`, `toCbor()` (tag `xid`), `fromCbor(c)`, `XIDDocument.codec` |
+| `untaggedCbor()` / `fromUntaggedCbor(c)` | `untaggedCbor()`, `toCbor()` (tag `xid`), `XIDDocument.codec` (`fromCbor`/`fromUntaggedCbor` arrived in beta.2) |
 
 ## 2. Keys, services, delegates, provenance
 
@@ -52,7 +79,7 @@ Two behaviours moved toward the reference on the way:
 | `Key.new(p)` / `Key.newAllowAll(p)` / `Key.newWithPrivateKeys(priv, pub)` / `Key.newWithPrivateKeyBase(b)` | `Key.from(p, { privateKeys?, nickname?, endpoints?, permissions? })` / `Key.allowAll(p)` / `Key.from(pub, { privateKeys: priv })` / `Key.fromPrivateKeyBase(b)` |
 | `key.publicKeys()`, `privateKeys()`, `hasPrivateKeys()`, `hasEncryptedPrivateKeys()`, `privateKeySalt()`, `reference()`, `signingPublicKey()`, `nickname()`, `endpoints()`, `permissions()`, `permissionsMut()` | getters (`encapsulationPublicKey()` stays a method, like `PublicKeys`') |
 | `key.addPermission(p)` / `HasPermissionsMixin.addAllow(key, p)` / `…addDeny` | `key.allow(p)` / `key.deny(p)` (also on `Service` and `Delegate`); `key.permissions` for the rest |
-| `HasNicknameMixin.addNickname(key, n)` | `key.setNickname(n)` |
+| `HasNicknameMixin.addNickname(key, n)` | `key.addNickname(n)` (`setNickname` overwrites) |
 | `key.intoEnvelopeOpt(options)` / `intoEnvelope()` | `key.toEnvelope({ privateKeys? })` |
 | `Key.tryFromEnvelope(e, password)` | `Key.fromEnvelope(e, { password? })` |
 | `key.privateKeyEnvelope(password)` | `key.privateKeyEnvelope({ password? })` |
@@ -62,7 +89,7 @@ Two behaviours moved toward the reference on the way:
 | `service.addKey({ publicKeys() })` / `addDelegate({ xid() })` | `addKey(key)` / `addDelegate(delegate \| document)` (getters) |
 | `Service.tryFromEnvelope(e)` / `service.intoEnvelope()` | `Service.fromEnvelope(e)` / `service.toEnvelope()` |
 | `Delegate.new(controller)`, `delegate.controller().read()`, `xid()`, `reference()`, `permissions()` | `Delegate.from(controller, { permissions? })`, `delegate.controller`, `xid`, `reference`, `permissions` |
-| `Delegate.tryFromEnvelope(e)` (after `registerXIDDocumentClass`) | `Delegate.fromEnvelope(e, (inner) => XIDDocument.fromEnvelope(inner))` |
+| `Delegate.tryFromEnvelope(e)` (after `registerXIDDocumentClass`) | `Delegate.fromEnvelope(e)` |
 | `Provenance.new(mark)` / `Provenance.newWithGenerator(generator, mark)` | `Provenance.from(mark, { generator? })` |
 | `provenance.mark()`, `generator()`, `hasGenerator()`, `hasEncryptedGenerator()`, `generatorSalt()` | getters |
 | `provenance.generatorMut(password)` / `generatorEnvelope(password)` | `unlockGenerator({ password })` / `generatorEnvelope({ password })` |
@@ -85,7 +112,7 @@ Two behaviours moved toward the reference on the way:
 ## 4. Dependencies
 
 `@blockchaincommons/dcbor-compat` is gone; `dcbor`, `rand` and `tags` are
-declared. The redesigned `components` (`/kdf` for `KeyDerivationMethod`),
+declared. The `@blockchaincommons` `components` (`/kdf` for `KeyDerivationMethod`),
 `envelope` (`/attachment`, `/edge`, `/secret`, `/signature`, `/types`),
 `known-values`, `provenance-mark` and `uniform-resources` are required.
 
@@ -159,4 +186,4 @@ shared type is resolved:
 
 - The public API: every exported name, signature and type is identical.
 - The wire format. Encodings produced by `@bcts/xid` decode here, and the reverse.
-- Parity with the Rust reference implementation. See [`RUST_DIVERGENCES.md`](./RUST_DIVERGENCES.md).
+- Parity with the Rust reference implementation. See [`tests/rust-validation/README.md`](./tests/rust-validation/README.md).

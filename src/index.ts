@@ -6,13 +6,14 @@
  * identifier (BCR-2024-010), and their envelope, CBOR and UR forms.
  */
 
-// Ported from bc-xid-rust
-
 export {
   XIDError,
   XID_ERROR_CODES,
   type XIDErrorCode,
   type XIDErrorDetails,
+  type XIDErrorDetailsByCode,
+  type XIDErrorDetailsFor,
+  type XIDErrorTyped,
   type ItemDetails,
   type PlainDetails,
   type UnexpectedPredicateDetails,
@@ -43,7 +44,7 @@ export {
   type KeyEnvelopeOptions,
   type PasswordOptions,
   type XIDPrivateKeyOptions,
-  type PrivateKeyData,
+  type EncryptOptions,
 } from "./key";
 
 export { Service, type ServiceInput } from "./service";
@@ -51,6 +52,7 @@ export { Service, type ServiceInput } from "./service";
 export {
   Delegate,
   type DelegateInput,
+  type DelegateParseOptions,
   type ParseXIDDocument,
   type XIDDocumentLike,
 } from "./delegate";
@@ -60,18 +62,21 @@ export {
   type ProvenanceInput,
   type ProvenanceEnvelopeOptions,
   type XIDGeneratorOptions,
-  type GeneratorData,
 } from "./provenance";
 
 export {
   XIDDocument,
   type XIDDocumentInput,
+  type XIDDocumentCodec,
+  type XIDRandomOptions,
   type XIDInceptionKey,
+  type XIDInceptionKeyPair,
   type XIDGenesis,
   type XIDSigning,
   type XIDVerifySignature,
   type XIDEnvelopeOptions,
   type XIDParseOptions,
   type SignedEnvelopeOptions,
+  type AttachmentInput,
   type NextProvenanceMarkOptions,
 } from "./xid-document";

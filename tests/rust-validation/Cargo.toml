@@ -4,14 +4,16 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+# The reference and its siblings, pinned to the released crates the port
+# tracks. Nothing is patched.
 [dependencies]
-bc-xid = { path = "../../../../Rust/bc-xid-rust" }
-bc-envelope = { version = "0.43", features = ["multithreaded"] }
-bc-components = "0.31"
-provenance-mark = { version = "0.24", features = ["envelope"] }
-known-values = "0.15"
-bc-ur = "0.19"
-dcbor = "0.25"
+bc-xid = "=0.23.0"
+bc-envelope = { version = "=0.43.0", features = ["multithreaded"] }
+bc-components = "=0.31.1"
+provenance-mark = { version = "=0.24.0", features = ["envelope"] }
+known-values = "=0.15.5"
+bc-ur = "=0.19.2"
+dcbor = "=0.25.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 hex = "0.4"

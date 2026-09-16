@@ -20,16 +20,23 @@
   "validation": {
     "notExported": true,
     "invalidLink": true,
-    "notDocumented": false
+    "notDocumented": true
   },
+  "requiredToBeDocumented": [
+    "Enum",
+    "EnumMember",
+    "Variable",
+    "Function",
+    "Class",
+    "Interface",
+    "Property",
+    "Method",
+    "Accessor",
+    "TypeAlias"
+  ],
   "categorizeByGroup": true,
   "defaultCategory": "Other",
   "categoryOrder": [
-    "Core CBOR",
-    "Encoding/Decoding",
-    "Data Structures",
-    "Tagged Values",
-    "Utilities",
     "*"
   ],
   "sort": [

@@ -26,8 +26,10 @@ bun add @blockchaincommons/xid
 
 ```typescript
 import { PrivateKeyBase } from "@blockchaincommons/components";
+import { registerTags } from "@blockchaincommons/provenance-mark";
 import { XIDDocument, Key, Service } from "@blockchaincommons/xid";
 
+registerTags(); // once: the envelope and provenance-mark summarisers, for `format()`
 const alice = PrivateKeyBase.random();
 const doc = XIDDocument.from({
   inceptionKey: alice,
@@ -45,8 +47,23 @@ back.equals(doc); // true
 doc.toUR().toString(); // "ur:xid/…"
 ```
 
-Errors are `XIDError` (`code`, typed `details`); every read is a getter,
-every option a string or a small object.
+Every failure is an `XIDError`: `code` names the condition with the
+reference's variant names (`Duplicate`, `NotFound`, `EnvelopeParsing`, …),
+`details` is typed by the code, and a sibling error wrapped inside a
+decoder is `cause`. A caller's own faulty input (a `null` where private
+keys go, an unknown option string, an invalid date) is a `TypeError`; a
+constructor given text that is not a URI raises the components error.
+
+Reads are getters. Containers copy out (`keys`, `delegates`, `services`,
+`resolutionMethods`, `endpoints`, `permissions.allow`); the values in them
+are live, so `doc.keys[0].setNickname("x")` changes the document, and
+`attachments` and `edges()` are the document's own containers. Options are
+strings or small objects (`toEnvelope({ privateKeys: "include", sign:
+"inception" })`).
+
+On the wire, a service's permissions are allow-only: `'deny'` assertions
+are written but not read back, as the reference does (see ADR 0007 in
+`docs/adr`).
 
 
 Runnable examples live in the [`examples/`](https://github.com/BlockchainCommons/bc-xid-ts/tree/master/examples) directory.
@@ -57,12 +74,13 @@ Runnable examples live in the [`examples/`](https://github.com/BlockchainCommons
 
 ### Version History
 
+- **1.0.0-beta.2 (September 16, 2026)** - Every decode failure is an `XIDError` with the reference's codes and messages; strict CBOR decoders (`fromCbor`, `fromUntaggedCbor`); typed error details; `addNickname`; options objects throughout; the JavaScript input domain checked; the Rust harness compares messages on every parser path.
 - **1.0.0-beta.1 (September 9, 2026)** - Initial beta implementation.
 
 ### Roadmap
 
 - Continued testing and auditing on the path from beta to a stable **1.0.0** release.
-- Continued parity with the Rust reference implementation as it evolves (see [`RUST_DIVERGENCES.md`](./RUST_DIVERGENCES.md)).
+- Continued parity with the Rust reference implementation as it evolves (see [`tests/rust-validation/README.md`](./tests/rust-validation/README.md) for what is compared and the current result).
 
 ### Dependencies
 
@@ -122,7 +140,7 @@ The following people directly contributed to this repository. You can add your n
 
 **Blockchain Commons XID for TypeScript** was produced as a collaboration between Blockchain Commons and one of our patrons, [Parity Technologies](https://parity.io): Parity wrote the wrappers based on Blockchain Commons' specifications and reference libraries. Blockchain Commons is dedicated to not just creating open infrastructure on our own, but also coordinating the work of other companies in benefiting the Commons. Thanks to Parity for working directly with us in this manner.
 
-![](.github/parity.svg)
+![](.github/assets/parity.svg)
 
 ## Responsible Disclosure
 

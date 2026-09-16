@@ -1,5 +1,5 @@
 /**
- * Golden vector suite (Phase 1.2): the committed freeze of every document,
+ * Golden vector suite: the committed freeze of every document,
  * decode, mutation, key and provenance outcome. Changes only through
  * `bun run vectors:generate`.
  */
@@ -7,7 +7,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
-import { materialize, redesignedAdapterFor, type Recipe, type Outcome } from "./vectors/recipes";
+import { materialize, type Recipe, type Outcome } from "./vectors/recipes";
+import { workingTreeAdapterFor } from "./vectors/working-tree-adapter";
 import { currentDeps, currentModule } from "./vectors/deps";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -15,12 +16,12 @@ const { count, vectors } = JSON.parse(readFileSync(join(here, "vectors/vectors.j
   count: number;
   vectors: { name: string; recipe: Recipe; expect: Outcome }[];
 };
-const api = redesignedAdapterFor(await currentModule(), currentDeps);
+const api = workingTreeAdapterFor(await currentModule(), currentDeps);
 
 describe("golden vectors (frozen)", () => {
   it("fixture is self-consistent and non-trivial", () => {
     expect(vectors.length).toBe(count);
-    expect(vectors.length).toBeGreaterThanOrEqual(180);
+    expect(vectors.length).toBeGreaterThanOrEqual(350);
   });
   it("every vector matches", { timeout: 300_000 }, () => {
     const diffs: string[] = [];

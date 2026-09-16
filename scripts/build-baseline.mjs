@@ -1,12 +1,12 @@
 /**
- * Build the frozen pre-redesign baseline bundle (Method Phase 0.6).
+ * Build the frozen baseline bundle.
  *
  *   bun scripts/build-baseline.mjs
  *
  * Bundles src/index.ts as a single ESM file with every @blockchaincommons
  * sibling INLINED, resolving each sibling to ITS frozen baseline bundle
  * (../<repo>/tests/baseline/<pkg>-baseline.mjs) when one exists, so the
- * baseline keeps the pre-redesign behaviour of its dependencies even after
+ * baseline keeps the published behaviour of its dependencies even after
  * they change. Writes tests/baseline/<pkg>-baseline.mjs, the .d.mts API
  * snapshot, and README.md with the commit and sha256 pinned.
  */
@@ -31,7 +31,7 @@ const short = pkg.name.replace("@blockchaincommons/", "");
 const outDir = join(root, "tests", "baseline");
 mkdirSync(outDir, { recursive: true });
 
-// The closure is the published pre-redesign `@bcts/*` packages installed
+// The closure is the published `@bcts/*` packages installed
 // under tests/baseline (see its package.json): one copy of every sibling,
 // unlike the per-package frozen bundles, which each inline their own.
 const alias = {};
@@ -70,11 +70,11 @@ writeFileSync(
   `# Frozen baseline build
 
 \`${short}-baseline.mjs\` is the self-contained ESM bundle of \`${pkg.name}\` built from
-commit \`${commit}\`, the pre-redesign wire-format reference. It is built from
-the PUBLISHED pre-redesign packages (\`@bcts/xid\` 1.0.0-beta.6 and its closure,
+commit \`${commit}\`, the wire-format reference before this package's API. It is built from
+the PUBLISHED \`@bcts\` packages (\`@bcts/xid\` 1.0.0-beta.6 and its closure,
 pinned by tests/baseline/package.json), so every sibling is inlined exactly
 once, with the behaviour consumers had.
-\`${short}-baseline.d.mts\` is the public surface at that commit (Phase 0.5).
+\`${short}-baseline.d.mts\` is the public surface at that commit.
 
 \`tests/differential.test.ts\` runs every corpus recipe through this bundle and
 the working tree and asserts identical outcomes; it pins the sha256 below so

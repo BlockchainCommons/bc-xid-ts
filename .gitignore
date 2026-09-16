@@ -8,7 +8,8 @@ node_modules
 # Build artifacts
 dist
 coverage
-docs
+# Generated TypeDoc output; retain handwritten architecture notes.
+/docs/*
 *.tsbuildinfo
 
 # Benchmark output
@@ -36,12 +37,6 @@ bench/charts/*.html
 
 # Rust cross-validation harness build artifacts
 tests/rust-validation/target
-
-# Lockfile: intentionally absent until every @blockchaincommons dependency is
-# published. Local verification installs siblings with file:../ links, which
-# would bake unpublishable paths into bun.lock. A real lockfile is committed at
-# the first release (see REPO_SPLIT_PLAN.md, Phase 6).
-bun.lock
 
 # The baseline closure is installed, not committed
 tests/baseline/node_modules/

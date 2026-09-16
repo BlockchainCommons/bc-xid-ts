@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    setupFiles: ["tests/setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "json-summary", "html"],
@@ -13,10 +14,10 @@ export default defineConfig({
       exclude: ["src/**/*.d.ts", "src/index.ts"],
       // Raise-only floors. Seed from the first measured run; never lower.
       thresholds: {
-        statements: 81,
-        branches: 75,
-        functions: 83,
-        lines: 85,
+        statements: 87,
+        branches: 82,
+        functions: 89,
+        lines: 91,
       },
     },
   },

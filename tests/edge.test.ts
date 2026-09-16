@@ -37,8 +37,8 @@ describe("Edge", () => {
       });
 
       expect(xidDocument.hasEdges()).toBe(false);
-      expect(xidDocument.edges().isEmpty()).toBe(true);
-      expect(xidDocument.edges().len()).toBe(0);
+      expect([...xidDocument.edges()]).toEqual([]);
+      expect(xidDocument.edges().size).toBe(0);
     });
 
     it("should add edge", () => {
@@ -54,7 +54,7 @@ describe("Edge", () => {
       xidDocument.addEdge(edge);
 
       expect(xidDocument.hasEdges()).toBe(true);
-      expect(xidDocument.edges().len()).toBe(1);
+      expect(xidDocument.edges().size).toBe(1);
     });
 
     it("should add multiple edges", () => {
@@ -71,7 +71,7 @@ describe("Edge", () => {
       xidDocument.addEdge(edge1);
       xidDocument.addEdge(edge2);
 
-      expect(xidDocument.edges().len()).toBe(2);
+      expect(xidDocument.edges().size).toBe(2);
     });
 
     it("should get edge by digest", () => {
@@ -144,11 +144,11 @@ describe("Edge", () => {
       const bob = Envelope.from("Bob");
       xidDocument.addEdge(makeEdge("e1", "foaf:Person", alice, alice));
       xidDocument.addEdge(makeEdge("e2", "schema:colleague", alice, bob));
-      expect(xidDocument.edges().len()).toBe(2);
+      expect(xidDocument.edges().size).toBe(2);
 
       xidDocument.clearEdges();
       expect(xidDocument.hasEdges()).toBe(false);
-      expect(xidDocument.edges().len()).toBe(0);
+      expect(xidDocument.edges().size).toBe(0);
     });
   });
 
@@ -184,7 +184,7 @@ describe("Edge", () => {
       // Round-trip
       const xidDocument2 = XIDDocument.fromEnvelope(envelope);
       expect(xidDocument.equals(xidDocument2)).toBe(true);
-      expect(xidDocument2.edges().len()).toBe(2);
+      expect(xidDocument2.edges().size).toBe(2);
     });
   });
 
@@ -205,7 +205,7 @@ describe("Edge", () => {
       const recovered = XIDDocument.fromEnvelope(recoveredEnvelope);
 
       expect(xidDocument.equals(recovered)).toBe(true);
-      expect(recovered.edges().len()).toBe(2);
+      expect(recovered.edges().size).toBe(2);
     });
   });
 
@@ -226,7 +226,7 @@ describe("Edge", () => {
       const recovered = XIDDocument.fromEnvelope(signedEnvelope, { verify: "inception" });
       expect(xidDocument.xid.equals(recovered.xid)).toBe(true);
       expect(recovered.hasEdges()).toBe(true);
-      expect(recovered.edges().len()).toBe(1);
+      expect(recovered.edges().size).toBe(1);
     });
   });
 
@@ -266,7 +266,7 @@ describe("Edge", () => {
       // Add a resolution method — edges should still be present
       xidDocument.addResolutionMethod("https://resolver.example.com");
       expect(xidDocument.hasEdges()).toBe(true);
-      expect(xidDocument.edges().len()).toBe(1);
+      expect(xidDocument.edges().size).toBe(1);
 
       // Serialize and recover
       const envelope = xidDocument.toEnvelope();
@@ -317,7 +317,7 @@ describe("Edge", () => {
       xidDocument.addEdge(makeEdge("e3", "schema:CreativeWork", alice, bob));
 
       let count = 0;
-      for (const [, edgeEnv] of xidDocument.edges().iter()) {
+      for (const edgeEnv of xidDocument.edges()) {
         validateEdge(edgeEnv); // Should not throw
         count++;
       }
@@ -346,7 +346,7 @@ describe("Edge", () => {
       const recovered = XIDDocument.fromEnvelope(envelope);
       expect(xidDocument.equals(recovered)).toBe(true);
 
-      const [, recoveredEdge] = recovered.edges().iter().next().value;
+      const [recoveredEdge] = [...recovered.edges()];
       validateEdge(recoveredEdge); // Should not throw
       expect(edgeIsA(recoveredEdge).asText()).toBe("schema:colleague");
       expect(format(edgeTarget(recoveredEdge))).toContain('"department"');
@@ -361,7 +361,7 @@ describe("Edge", () => {
       const alice = Envelope.from("Alice");
       const edge = makeEdge("cred-1", "foaf:Person", alice, alice);
       xidDocument.addEdge(edge);
-      xidDocument.addAttachment("metadata", "com.example");
+      xidDocument.addAttachment({ payload: "metadata", vendor: "com.example" });
 
       expect(xidDocument.hasEdges()).toBe(true);
       expect(xidDocument.hasAttachments).toBe(true);
@@ -406,10 +406,10 @@ describe("Edge", () => {
 
       xidDocument.addEdge(edge1);
       xidDocument.addEdge(edge2);
-      expect(xidDocument.edges().len()).toBe(2);
+      expect(xidDocument.edges().size).toBe(2);
 
       xidDocument.removeEdge(digest1);
-      expect(xidDocument.edges().len()).toBe(1);
+      expect(xidDocument.edges().size).toBe(1);
       expect(xidDocument.getEdge(digest2)).toBeDefined();
       expect(xidDocument.getEdge(digest1)).toBeUndefined();
     });

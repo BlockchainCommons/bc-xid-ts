@@ -6,20 +6,20 @@
  * identifier, and its envelope, CBOR and UR forms.
  */
 
-// Ported from bc-xid-rust/src/xid_document.rs
-
 import {
   type Cbor,
   type CborCodec,
   type CborTagged,
   type Tag,
   type ToCbor,
+  CborError,
   asBytes,
-  asTaggedValue,
   cbor,
+  extractTaggedContent,
   taggedValue,
+  validateTag,
 } from "@blockchaincommons/dcbor";
-import { Envelope, type ToEnvelope } from "@blockchaincommons/envelope";
+import { Envelope, type EnvelopeInput, type ToEnvelope } from "@blockchaincommons/envelope";
 import { Attachments } from "@blockchaincommons/envelope/attachment";
 import { Edges, type Edgeable } from "@blockchaincommons/envelope/edge";
 import { sign, hasSignatureFrom } from "@blockchaincommons/envelope/signature";
@@ -44,42 +44,74 @@ import {
   type EncapsulationPublicKey,
   type SigningPublicKey,
 } from "@blockchaincommons/components";
-import { XID as XID_TAG } from "@blockchaincommons/tags";
+import { TAG_XID } from "@blockchaincommons/tags";
 import { type ToUR, type UR, decodeURWith, urFor } from "@blockchaincommons/uniform-resources";
 import { type RngOptions } from "@blockchaincommons/rand";
 import {
   type ProvenanceMark,
   ProvenanceMarkGenerator,
   type ProvenanceMarkResolution,
+  PROVENANCE_MARK_RESOLUTIONS,
   ProvenanceSeed,
 } from "@blockchaincommons/provenance-mark";
 
-import { Key, type XIDPrivateKeyOptions, type PasswordOptions, passwordBytes } from "./key";
+import {
+  Key,
+  type XIDPrivateKeyOptions,
+  type PasswordOptions,
+  expectPrivateKeyOptions,
+  passwordBytes,
+} from "./key";
 import { Service } from "./service";
-import { Delegate } from "./delegate";
+import { Delegate, setDefaultDocumentParser } from "./delegate";
 import { Provenance, type XIDGeneratorOptions } from "./provenance";
 import { XIDError } from "./error";
+import { cborErrorOf, expectOneOf, expectValidDate, guarded, leafAs, wrapForeign } from "./domain";
 
 /**
  * The inception key of a new document: public keys only, a private key
  * base (Schnorr keys, private keys held), or a public/private pair.
  */
-export type XIDInceptionKey =
-  PublicKeys | PrivateKeyBase | { publicKeys: PublicKeys; privateKeys: PrivateKeys };
+export type XIDInceptionKey = PublicKeys | PrivateKeyBase | XIDInceptionKeyPair;
 
-/** The genesis provenance mark of a new document, from a passphrase or a seed. */
+/** An inception key given as a public/private pair. */
+export interface XIDInceptionKeyPair {
+  /** The public keys. */
+  publicKeys: PublicKeys;
+  /** The private keys (not checked against the public keys, as the reference does not). */
+  privateKeys: PrivateKeys;
+}
+
+/**
+ * The genesis provenance mark of a new document: exactly one of a
+ * passphrase or a 32-byte seed (a `ProvenanceSeed` or its bytes), the
+ * resolution (`"high"` unless given), the date (now unless given) and
+ * the mark's info.
+ */
 export interface XIDGenesis {
+  /** The passphrase the chain's seed derives from. */
   passphrase?: string | undefined;
-  /** 32 bytes (longer input is cut to 32). */
-  seed?: Uint8Array | undefined;
+  /** The chain's seed: a `ProvenanceSeed` or exactly 32 bytes. */
+  seed?: Uint8Array | ProvenanceSeed | undefined;
+  /** The chain's resolution; `"high"` unless given. */
   resolution?: ProvenanceMarkResolution | undefined;
+  /** The genesis mark's date; now unless given. */
   date?: Date | undefined;
+  /** The genesis mark's info. */
   info?: Cbor | undefined;
 }
 
 /** What `XIDDocument.from` takes. */
 export interface XIDDocumentInput {
+  /** The inception key, whose signing key the XID derives from. */
   inceptionKey: XIDInceptionKey;
+  /** A genesis mark to start the provenance chain with. */
+  genesis?: XIDGenesis | undefined;
+}
+
+/** What `XIDDocument.random` takes. */
+export interface XIDRandomOptions extends RngOptions {
+  /** A genesis mark to start the provenance chain with. */
   genesis?: XIDGenesis | undefined;
 }
 
@@ -89,29 +121,58 @@ export type XIDSigning = "none" | "inception" | Signer;
 /** Which signature `fromEnvelope` demands. */
 export type XIDVerifySignature = "none" | "inception";
 
+/** What `XIDDocument.toEnvelope` takes. */
 export interface XIDEnvelopeOptions {
+  /** How each key's private keys go into the envelope; `"omit"` unless given. */
   privateKeys?: XIDPrivateKeyOptions | undefined;
+  /** How the provenance generator goes into the envelope; `"omit"` unless given. */
   generator?: XIDGeneratorOptions | undefined;
+  /** Who signs; `"none"` unless given. */
   sign?: XIDSigning | undefined;
 }
 
+/** What `XIDDocument.fromEnvelope` takes. */
 export interface XIDParseOptions extends PasswordOptions {
+  /** Which signature to demand; `"none"` unless given. */
   verify?: XIDVerifySignature | undefined;
 }
 
+/** What `XIDDocument.toSignedEnvelope` takes besides the signer. */
 export interface SignedEnvelopeOptions {
+  /** How each key's private keys go into the envelope; `"omit"` unless given. */
   privateKeys?: XIDPrivateKeyOptions | undefined;
+}
+
+/** What `XIDDocument.addAttachment` takes. */
+export interface AttachmentInput {
+  /** The payload, as anything an envelope is made from. */
+  payload: EnvelopeInput;
+  /** The vendor, a reverse domain name. */
+  vendor: string;
+  /** The URI of the format the payload conforms to. */
+  conformsTo?: string | undefined;
 }
 
 /** What `nextProvenanceMark` takes. */
 export interface NextProvenanceMarkOptions extends PasswordOptions {
+  /** The new mark's date; now unless given. */
   date?: Date | undefined;
+  /** The new mark's info. */
   info?: Cbor | undefined;
-  /** A generator kept outside the document; refused when the document holds one. */
+  /**
+   * A generator kept outside the document; refused when the document
+   * holds one. When given, `password` is not used.
+   */
   generator?: ProvenanceMarkGenerator | undefined;
 }
 
-let CODEC: (CborCodec<XIDDocument> & { readonly tags: readonly Tag[] }) | undefined;
+/** The document's CBOR codec, with the tag it carries. */
+export interface XIDDocumentCodec extends CborCodec<XIDDocument> {
+  /** The `xid` tag (40024). */
+  readonly tags: readonly Tag[];
+}
+
+let CODEC: XIDDocumentCodec | undefined;
 
 const bytesEqual = (a: Uint8Array, b: Uint8Array): boolean => {
   if (a.length !== b.length) return false;
@@ -119,6 +180,15 @@ const bytesEqual = (a: Uint8Array, b: Uint8Array): boolean => {
   return true;
 };
 
+const VERIFY_NAMES = ["none", "inception"] as const;
+
+/**
+ * A XID document: the keys, delegates, services, resolution methods,
+ * provenance, attachments and edges published under an extensible
+ * identifier. The document is mutable; its `keys`, `delegates` and
+ * `services` are copied-out arrays of live values, and `attachments` and
+ * `edges()` are the document's own containers.
+ */
 export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeable {
   private readonly _xid: XID;
   private readonly _resolutionMethods: Map<string, URI>;
@@ -154,7 +224,9 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
   /**
    * A document whose XID derives from the inception key's signing key;
    * the key is added allowed `All`. A genesis mark starts the provenance
-   * chain and keeps the generator in the document.
+   * chain and keeps the generator in the document. A missing inception
+   * key or a malformed genesis is a `TypeError`; a seed of the wrong
+   * length is `ProvenanceMark`.
    */
   static from({ inceptionKey, genesis }: XIDDocumentInput): XIDDocument {
     const key = XIDDocument.keyFor(inceptionKey);
@@ -172,7 +244,7 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
   }
 
   /** A document with a random private key base as its inception key. */
-  static random({ rng }: RngOptions = {}, genesis?: XIDGenesis): XIDDocument {
+  static random({ rng, genesis }: XIDRandomOptions = {}): XIDDocument {
     return XIDDocument.from({
       inceptionKey: PrivateKeyBase.random(rng === undefined ? {} : { rng }),
       genesis,
@@ -185,6 +257,11 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
   }
 
   private static keyFor(inceptionKey: XIDInceptionKey): Key {
+    if (typeof inceptionKey !== "object" || inceptionKey === null) {
+      throw new TypeError(
+        "inceptionKey must be PublicKeys, a PrivateKeyBase or { publicKeys, privateKeys }",
+      );
+    }
     if (inceptionKey instanceof PrivateKeyBase) return Key.fromPrivateKeyBase(inceptionKey);
     if ("privateKeys" in inceptionKey) {
       return Key.from(inceptionKey.publicKeys, { privateKeys: inceptionKey.privateKeys });
@@ -194,24 +271,43 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
 
   private static genesisFor(genesis: XIDGenesis | undefined): Provenance | undefined {
     if (genesis === undefined) return undefined;
-    const res = genesis.resolution ?? "high";
+    if (typeof genesis !== "object" || genesis === null) {
+      throw new TypeError("genesis must be an object with a passphrase or a seed");
+    }
+    const { passphrase, seed, resolution, date, info } = genesis;
+    if ((passphrase === undefined) === (seed === undefined)) {
+      throw new TypeError("genesis needs exactly one of passphrase or seed");
+    }
+    const res =
+      resolution === undefined
+        ? "high"
+        : expectOneOf(resolution, PROVENANCE_MARK_RESOLUTIONS, "genesis.resolution");
+    const at = date === undefined ? new Date() : expectValidDate(date, "genesis.date");
     const generator =
-      genesis.passphrase !== undefined
-        ? ProvenanceMarkGenerator.fromPassphrase(res, genesis.passphrase)
-        : ProvenanceMarkGenerator.from({
-            res,
-            seed: ProvenanceSeed.from((genesis.seed ?? new Uint8Array(0)).subarray(0, 32)),
-          });
-    const mark = generator.next(genesis.date ?? new Date(), { info: genesis.info });
+      passphrase !== undefined
+        ? ProvenanceMarkGenerator.fromPassphrase(res, passphrase)
+        : ProvenanceMarkGenerator.from({ res, seed: XIDDocument.seedOf(seed) });
+    const mark = generator.next(at, { info });
     return Provenance.from(mark, { generator });
+  }
+
+  /** A `ProvenanceSeed` from bytes; the wrong length is `ProvenanceMark`. */
+  private static seedOf(seed: Uint8Array | ProvenanceSeed | undefined): ProvenanceSeed {
+    if (seed instanceof ProvenanceSeed) return seed;
+    if (!(seed instanceof Uint8Array)) {
+      throw new TypeError("genesis.seed must be a ProvenanceSeed or 32 bytes");
+    }
+    return guarded(() => ProvenanceSeed.from(seed));
   }
 
   // Identity ------------------------------------------------------------------
 
+  /** The XID. */
   get xid(): XID {
     return this._xid;
   }
 
+  /** The XID's reference. */
   get reference(): Reference {
     return this._xid.reference();
   }
@@ -230,44 +326,49 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     );
   }
 
-  /** Assertions the parser did not recognise, kept as they were. */
+  /** Assertions the parser did not recognise, kept as they were (a copy). */
   get extraAssertions(): readonly Envelope[] {
-    return this._extraAssertions;
+    return [...this._extraAssertions];
   }
 
   // Resolution methods --------------------------------------------------------
 
+  /** The resolution methods (a copy). */
   get resolutionMethods(): ReadonlySet<URI> {
     return new Set(this._resolutionMethods.values());
   }
 
+  /** Adds a resolution method, as a URI or its text (a components error for text that is not a URI). */
   addResolutionMethod(method: URI | string): void {
     const uri = method instanceof URI ? method : URI.from(method);
     this._resolutionMethods.set(uri.toString(), uri);
   }
 
-  /** Whether it was there. */
+  /** Removes a resolution method; whether it was there. */
   removeResolutionMethod(method: URI | string): boolean {
     return this._resolutionMethods.delete(method instanceof URI ? method.toString() : method);
   }
 
   // Keys ----------------------------------------------------------------------
 
+  /** The keys (a copied-out array of live keys). */
   get keys(): readonly Key[] {
     return Array.from(this._keys.values());
   }
 
-  /** `Duplicate` when the public keys are already there. */
+  /** Adds a key; `Duplicate` when the public keys are already there. */
   addKey(key: Key): void {
     const id = key.reference.toHex();
     if (this._keys.has(id)) throw XIDError.duplicate("key");
     this._keys.set(id, key);
   }
 
+  /** The key with these public keys. */
   key(publicKeys: PublicKeys): Key | undefined {
     return this._keys.get(publicKeys.reference().toHex());
   }
 
+  /** The key with this reference. */
   keyByReference(reference: Reference): Key | undefined {
     for (const key of this._keys.values()) if (key.reference.equals(reference)) return key;
     return undefined;
@@ -294,13 +395,14 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     return key;
   }
 
-  /** `KeyNotFoundInDocument` unless the key is there. */
+  /** The key with these public keys; `KeyNotFoundInDocument` unless it is there. */
   expectKey(publicKeys: PublicKeys): Key {
     const key = this.key(publicKeys);
     if (key === undefined) throw XIDError.keyNotFoundInDocument(publicKeys.toString());
     return key;
   }
 
+  /** Whether the XID derives from this signing key. */
   isInceptionSigningKey(signingPublicKey: SigningPublicKey): boolean {
     return this._xid.validate(signingPublicKey);
   }
@@ -313,10 +415,12 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     return undefined;
   }
 
+  /** The inception key's private keys, when held in the clear. */
   get inceptionPrivateKeys(): PrivateKeys | undefined {
     return this.inceptionKey?.privateKeys;
   }
 
+  /** The inception key's signing key. */
   get inceptionSigningKey(): SigningPublicKey | undefined {
     return this.inceptionKey?.publicKeys.signingPublicKey;
   }
@@ -340,7 +444,7 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     return key;
   }
 
-  /** `NotFound` unless the key is there. */
+  /** Sets the key's nickname; `NotFound` unless the key is there. */
   setNameForKey(publicKeys: PublicKeys, name: string): void {
     const key = this.key(publicKeys);
     if (key === undefined) throw XIDError.notFound("key");
@@ -358,28 +462,31 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
   /** The inception key's private keys of a parsed envelope, unlocked with the password. */
   static inceptionPrivateKeysFromEnvelope(
     envelope: Envelope,
-    password: Uint8Array | string,
+    { password }: PasswordOptions = {},
   ): PrivateKeys | undefined {
     return XIDDocument.fromEnvelope(envelope, { password }).inceptionPrivateKeys;
   }
 
   // Delegates -----------------------------------------------------------------
 
+  /** The delegates (a copied-out array of live delegates). */
   get delegates(): readonly Delegate[] {
     return Array.from(this._delegates.values());
   }
 
-  /** `Duplicate` when a delegate with that XID is already there. */
+  /** Adds a delegate; `Duplicate` when a delegate with that XID is already there. */
   addDelegate(delegate: Delegate): void {
     const id = delegate.xid.toHex();
     if (this._delegates.has(id)) throw XIDError.duplicate("delegate");
     this._delegates.set(id, delegate);
   }
 
+  /** The delegate with this XID. */
   delegate(xid: XID): Delegate | undefined {
     return this._delegates.get(xid.toHex());
   }
 
+  /** The delegate whose XID has this reference. */
   delegateByReference(reference: Reference): Delegate | undefined {
     for (const d of this._delegates.values()) if (d.reference.equals(reference)) return d;
     return undefined;
@@ -403,7 +510,7 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     return delegate;
   }
 
-  /** `DelegateNotFoundInDocument` unless the delegate is there. */
+  /** The delegate with this XID; `DelegateNotFoundInDocument` unless it is there. */
   expectDelegate(xid: XID): Delegate {
     const delegate = this.delegate(xid);
     if (delegate === undefined) throw XIDError.delegateNotFoundInDocument(xid.toString());
@@ -412,15 +519,17 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
 
   // Services ------------------------------------------------------------------
 
+  /** The services (a copied-out array of live services). */
   get services(): readonly Service[] {
     return Array.from(this._services.values());
   }
 
+  /** The service at this URI. */
   service(uri: URI | string): Service | undefined {
     return this._services.get(uri.toString());
   }
 
-  /** `Duplicate` when a service at that URI is already there. */
+  /** Adds a service; `Duplicate` when a service at that URI is already there. */
   addService(service: Service): void {
     const id = service.uri.toString();
     if (this._services.has(id)) throw XIDError.duplicate("service");
@@ -460,23 +569,26 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
       throw XIDError.noReferences(uri);
     }
     for (const ref of service.keyReferences) {
-      if (this.keyByReference(ref) === undefined)
-        throw XIDError.unknownKeyReference(ref.toHex(), uri);
+      if (this.keyByReference(ref) === undefined) {
+        throw XIDError.unknownKeyReference(ref.toString(), uri);
+      }
     }
     for (const ref of service.delegateReferences) {
       if (this.delegateByReference(ref) === undefined) {
-        throw XIDError.unknownDelegateReference(ref.toHex(), uri);
+        throw XIDError.unknownDelegateReference(ref.toString(), uri);
       }
     }
     if (service.permissions.allow.size === 0) throw XIDError.noPermissions(uri);
   }
 
+  /** Whether any service references this key. */
   servicesReferenceKey(publicKeys: PublicKeys): boolean {
     const ref = publicKeys.reference();
     for (const service of this._services.values()) if (service.hasKeyReference(ref)) return true;
     return false;
   }
 
+  /** Whether any service references this delegate. */
   servicesReferenceDelegate(xid: XID): boolean {
     const ref = xid.reference();
     for (const service of this._services.values()) {
@@ -487,62 +599,72 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
 
   // Attachments and edges -----------------------------------------------------
 
+  /** The attachments: the document's own container. */
   get attachments(): Attachments {
     return this._attachments;
   }
 
+  /** Whether there are attachments. */
   get hasAttachments(): boolean {
-    return !this._attachments.isEmpty();
+    return this._attachments.size > 0;
   }
 
-  addAttachment(
-    payload: Parameters<Attachments["add"]>[0],
-    vendor: string,
-    conformsTo?: string,
-  ): void {
+  /** Adds an attachment. */
+  addAttachment({ payload, vendor, conformsTo }: AttachmentInput): void {
     this._attachments.add(payload, vendor, conformsTo);
   }
 
+  /** The attachment with this digest. */
   attachment(digest: Digest): Envelope | undefined {
     return this._attachments.get(digest);
   }
 
+  /** Removes and returns the attachment with this digest. */
   removeAttachment(digest: Digest): Envelope | undefined {
     return this._attachments.remove(digest);
   }
 
+  /** Removes every attachment. */
   clearAttachments(): void {
     this._attachments.clear();
   }
 
+  /** The edges: the document's own container (envelope's `Edgeable`). */
   edges(): Edges {
     return this._edges;
   }
 
+  /** The same container as `edges()` (envelope's `Edgeable` names both). */
   edgesMut(): Edges {
     return this._edges;
   }
 
+  /** Whether there are edges (envelope's `Edgeable`). */
   hasEdges(): boolean {
-    return !this._edges.isEmpty();
+    return this._edges.size > 0;
   }
 
+  /** Adds an edge envelope. */
   addEdge(edgeEnvelope: Envelope): void {
     this._edges.add(edgeEnvelope);
   }
 
+  /** The edge with this digest. */
   edge(digest: Digest): Envelope | undefined {
     return this._edges.get(digest);
   }
 
+  /** `edge(digest)` under the name envelope's `Edgeable` uses. */
   getEdge(digest: Digest): Envelope | undefined {
-    return this.edge(digest);
+    return this._edges.get(digest);
   }
 
+  /** Removes and returns the edge with this digest. */
   removeEdge(digest: Digest): Envelope | undefined {
     return this._edges.remove(digest);
   }
 
+  /** Removes every edge. */
   clearEdges(): void {
     this._edges.clear();
   }
@@ -564,6 +686,7 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     this._provenance = provenance === undefined ? undefined : Provenance.from(provenance);
   }
 
+  /** Sets the mark and the generator that continues its chain. */
   setProvenanceWithGenerator(generator: ProvenanceMarkGenerator, mark: ProvenanceMark): void {
     this._provenance = Provenance.from(mark, { generator });
   }
@@ -573,9 +696,12 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
    * the password when locked), or with a provided one when the document
    * has none. The generator must continue the current mark's chain at
    * the next sequence number. `NoProvenanceMark` without a mark,
-   * `NoGenerator`/`GeneratorConflict` for the wrong choice.
+   * `NoGenerator`/`GeneratorConflict` for the wrong choice,
+   * `ChainIdMismatch`/`SequenceMismatch` for a generator that does not
+   * continue the mark; an invalid date is a `TypeError`.
    */
   nextProvenanceMark({ date, info, password, generator }: NextProvenanceMarkOptions = {}): void {
+    const at = date === undefined ? new Date() : expectValidDate(date, "date");
     if (this._provenance === undefined) throw XIDError.noProvenanceMark();
     const currentMark = this._provenance.mark;
     let gen: ProvenanceMarkGenerator;
@@ -594,7 +720,7 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     }
     const expectedSeq = currentMark.seq + 1;
     if (gen.nextSeq !== expectedSeq) throw XIDError.sequenceMismatch(expectedSeq, gen.nextSeq);
-    this._provenance.setMark(gen.next(date ?? new Date(), { info }));
+    this._provenance.setMark(gen.next(at, { info }));
   }
 
   // Envelope ------------------------------------------------------------------
@@ -603,19 +729,23 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
    * The XID as the subject; `'dereferenceVia'`, `'key'`, `'delegate'`,
    * `'service'`, `'provenance'`, the extra assertions, attachments and
    * edges; then signed per `sign` (`MissingInceptionKey` when the
-   * inception key or its private keys are missing).
+   * inception key or its private keys are missing). An unknown option
+   * is a `TypeError`.
    */
   toEnvelope({
     privateKeys = "omit",
     generator = "omit",
     sign: signing = "none",
   }: XIDEnvelopeOptions = {}): Envelope {
+    const privateKeyOption = expectPrivateKeyOptions(privateKeys, "privateKeys");
+    const generatorOption = expectPrivateKeyOptions(generator, "generator");
+    const signer = XIDDocument.signerOf(signing);
     let envelope = Envelope.from(this._xid);
     for (const method of this._resolutionMethods.values()) {
       envelope = envelope.addAssertion(DEREFERENCE_VIA, method);
     }
     for (const key of this._keys.values()) {
-      envelope = envelope.addAssertion(KEY, key.toEnvelope({ privateKeys }));
+      envelope = envelope.addAssertion(KEY, key.toEnvelope({ privateKeys: privateKeyOption }));
     }
     for (const delegate of this._delegates.values()) {
       envelope = envelope.addAssertion(DELEGATE, delegate.toEnvelope());
@@ -624,19 +754,30 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
       envelope = envelope.addAssertion(SERVICE, service.toEnvelope());
     }
     if (this._provenance !== undefined) {
-      envelope = envelope.addAssertion(PROVENANCE, this._provenance.toEnvelope({ generator }));
+      envelope = envelope.addAssertion(
+        PROVENANCE,
+        this._provenance.toEnvelope({ generator: generatorOption }),
+      );
     }
     envelope = envelope.addAssertionEnvelopes(this._extraAssertions);
     envelope = this._attachments.addToEnvelope(envelope);
     envelope = this._edges.addToEnvelope(envelope);
-    if (signing === "inception") {
-      const privateKeys = this.inceptionKey?.privateKeys;
-      if (privateKeys === undefined) throw XIDError.missingInceptionKey();
-      envelope = sign(envelope, privateKeys);
-    } else if (signing !== "none") {
-      envelope = sign(envelope, signing);
+    if (signer === "inception") {
+      const inceptionPrivateKeys = this.inceptionKey?.privateKeys;
+      if (inceptionPrivateKeys === undefined) throw XIDError.missingInceptionKey();
+      envelope = sign(envelope, inceptionPrivateKeys);
+    } else if (signer !== "none") {
+      envelope = sign(envelope, signer);
     }
     return envelope;
+  }
+
+  /** The `sign` option checked: one of the two names, or a signer. */
+  private static signerOf(signing: unknown): XIDSigning {
+    if (typeof signing === "object" && signing !== null && "sign" in signing) {
+      return signing as Signer;
+    }
+    return expectOneOf(signing, ["none", "inception"] as const, "sign");
   }
 
   /** `toEnvelope` signed by `signer`, the generator omitted. */
@@ -649,13 +790,17 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
    * must be signed by the document's own inception key
    * (`EnvelopeNotSigned`, `SignatureVerificationFailed`, `InvalidXid`);
    * otherwise a wrapped (signed) subject is unwrapped and read as it is.
-   * The password unlocks locked private keys and generators.
+   * The password unlocks locked private keys and generators. Every
+   * failure is an `XIDError`: a sibling error inside the parser is
+   * wrapped with the reference's code. An unknown `verify` is a
+   * `TypeError`.
    */
   static fromEnvelope(
     envelope: Envelope,
     { password, verify = "none" }: XIDParseOptions = {},
   ): XIDDocument {
-    if (verify === "none") {
+    const mode = expectOneOf(verify, VERIFY_NAMES, "verify");
+    if (mode === "none") {
       const subject = envelope.subject();
       const toParse = subject.isWrapped() ? subject.unwrap() : envelope;
       return XIDDocument.parse(toParse, password);
@@ -675,10 +820,10 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
   }
 
   private static parse(envelope: Envelope, password: Uint8Array | string | undefined): XIDDocument {
-    const subject = envelope.case.type === "node" ? envelope.subject() : envelope;
-    const leaf = subject.asLeaf();
-    if (leaf === undefined) throw XIDError.invalidXid();
-    const doc = XIDDocument.fromXid(XID.fromCbor(leaf));
+    // The attachments and edges first, as the reference reads them.
+    const attachments = guarded(() => Attachments.fromEnvelope(envelope));
+    const edges = guarded(() => Edges.fromEnvelope(envelope));
+    const doc = XIDDocument.fromXid(leafAs(envelope.subject(), (c) => XID.fromCbor(c)));
     const pw = password === undefined ? undefined : passwordBytes(password);
     for (const assertion of envelope.assertions()) {
       const c = assertion.case;
@@ -694,9 +839,10 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
       const object = c.assertion.object();
       switch (predicateCase.value.value) {
         case DEREFERENCE_VIA.value: {
+          const leaf = guarded(() => object.expectLeaf());
           let uri: URI;
           try {
-            uri = URI.fromCbor(object.expectLeaf());
+            uri = URI.fromCbor(leaf);
           } catch {
             throw XIDError.invalidResolutionMethod();
           }
@@ -707,15 +853,17 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
           doc.addKey(Key.fromEnvelope(object, { password: pw }));
           break;
         case DELEGATE.value:
-          doc.addDelegate(Delegate.fromEnvelope(object, (e) => XIDDocument.fromEnvelope(e)));
+          doc.addDelegate(Delegate.fromEnvelope(object));
           break;
         case SERVICE.value:
           doc.addService(Service.fromEnvelope(object));
           break;
-        case PROVENANCE.value:
+        case PROVENANCE.value: {
+          const provenance = Provenance.fromEnvelope(object, { password: pw });
           if (doc._provenance !== undefined) throw XIDError.multipleProvenanceMarks();
-          doc._provenance = Provenance.fromEnvelope(object, { password: pw });
+          doc._provenance = provenance;
           break;
+        }
         case ATTACHMENT.value:
         case EDGE.value:
           break;
@@ -724,8 +872,8 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
           break;
       }
     }
-    doc._attachments = Attachments.fromEnvelope(envelope);
-    doc._edges = Edges.fromEnvelope(envelope);
+    doc._attachments = attachments;
+    doc._edges = edges;
     doc.expectServicesConsistent();
     return doc;
   }
@@ -742,25 +890,69 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     return XIDDocument.codec.encode(this);
   }
 
+  /** The tags this document's CBOR carries: `xid` (40024). */
   cborTags(): Tag[] {
-    return [XID_TAG];
+    return [TAG_XID];
   }
 
-  /** Tagged-CBOR codec; `decode` also accepts the untagged form. */
-  static get codec(): CborCodec<XIDDocument> & { readonly tags: readonly Tag[] } {
+  /** The tagged-CBOR codec: `decode` is `fromCbor`, the tag required. */
+  static get codec(): XIDDocumentCodec {
     return (CODEC ??= {
-      tags: Object.freeze([XID_TAG]),
-      encode: (value) => taggedValue(XID_TAG, value.untaggedCbor()),
-      decode: (value) => XIDDocument.fromUntaggedCbor(value),
+      tags: Object.freeze([TAG_XID]),
+      encode: (value) => taggedValue(TAG_XID, value.untaggedCbor()),
+      decode: (value) => XIDDocument.fromCbor(value),
     });
   }
 
-  private static fromUntaggedCbor(cborValue: Cbor): XIDDocument {
-    const tv = asTaggedValue(cborValue);
-    const value = tv !== undefined && tv[0].value === XID_TAG.value ? tv[1] : cborValue;
-    const bytes = asBytes(value);
-    if (bytes !== undefined) return XIDDocument.fromXid(XID.from(bytes));
-    return XIDDocument.fromEnvelope(Envelope.fromCbor(value));
+  /**
+   * A document from its tagged CBOR: the `xid` tag (40024) over the
+   * untagged form. A missing or different tag, or a form the untagged
+   * decoder rejects, is `Cbor` with the dcbor error's message.
+   */
+  static fromCbor(cborValue: Cbor): XIDDocument {
+    let untagged: Cbor;
+    try {
+      validateTag(cborValue, [TAG_XID]);
+      untagged = extractTaggedContent(cborValue);
+    } catch (error) {
+      throw XIDError.cborDecode(cborErrorOf(error));
+    }
+    return XIDDocument.fromUntaggedCbor(untagged);
+  }
+
+  /**
+   * A document from its untagged CBOR: a 32-byte string is the XID of an
+   * empty document; anything else is a document envelope. A tagged value
+   * is rejected (the envelope tag is expected), as the reference's
+   * `from_untagged_cbor` rejects it. A rejection is `Cbor`: the dcbor
+   * error's message, or the document error's (`envelope parsing error`,
+   * …) when the envelope decodes but the document does not.
+   */
+  static fromUntaggedCbor(cborValue: Cbor): XIDDocument {
+    const bytes = asBytes(cborValue);
+    if (bytes !== undefined) {
+      try {
+        return XIDDocument.fromXid(XID.from(bytes));
+      } catch (error) {
+        throw XIDError.cborDecode(cborErrorOf(error));
+      }
+    }
+    let envelope: Envelope;
+    try {
+      envelope = Envelope.fromCbor(cborValue);
+    } catch (error) {
+      throw XIDError.cborDecode(cborErrorOf(error));
+    }
+    try {
+      return XIDDocument.fromEnvelope(envelope);
+    } catch (error) {
+      const wrapped = wrapForeign(error);
+      if (!XIDError.isXIDError(wrapped)) throw wrapped;
+      if (wrapped.code === "Cbor" && CborError.isCborError(wrapped.cause)) {
+        throw XIDError.cborDecode(wrapped.cause);
+      }
+      throw XIDError.cborDecode(CborError.custom(wrapped.message));
+    }
   }
 
   /** `ur:xid/…` over `untaggedCbor`. */
@@ -768,8 +960,18 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     return urFor(this);
   }
 
+  /**
+   * A document from a `ur:xid/…` UR. A UR of another type is `Cbor`
+   * (`expected UR type xid, but found …`), as the reference's `from_ur`
+   * reports it.
+   */
   static fromUR(ur: UR): XIDDocument {
-    return decodeURWith(ur, XIDDocument.codec);
+    try {
+      return decodeURWith(ur, XIDDocument.codec);
+    } catch (error) {
+      if (CborError.isCborError(error)) throw XIDError.cborDecode(error);
+      throw error;
+    }
   }
 
   // Comparison ----------------------------------------------------------------
@@ -818,6 +1020,7 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     return true;
   }
 
+  /** A deep copy. */
   clone(): XIDDocument {
     const doc = new XIDDocument(
       this._xid,
@@ -827,13 +1030,16 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
       new Map(Array.from(this._services.entries()).map(([k, v]) => [k, v.clone()])),
       this._provenance?.clone(),
     );
-    for (const [, env] of this._attachments.iter()) doc._attachments.addEnvelope(env);
-    for (const [, env] of this._edges.iter()) doc._edges.add(env);
+    for (const env of this._attachments) doc._attachments.addEnvelope(env);
+    for (const env of this._edges) doc._edges.add(env);
     doc._extraAssertions = [...this._extraAssertions];
     return doc;
   }
 
+  /** `XIDDocument(<short XID>)`. */
   toString(): string {
     return `XIDDocument(${this._xid.shortDescription()})`;
   }
 }
+
+setDefaultDocumentParser((envelope) => XIDDocument.fromEnvelope(envelope));

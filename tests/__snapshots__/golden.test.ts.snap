@@ -9,11 +9,11 @@ XID(71274df1) [
     ]
 ]",
   "## decode inception ur:envelope/lftpsotanshdhdcxjsdigtwneocm
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/tpsotanshdhdcxehadtawfcyrtpt
 XID(3101d9f3)",
   "## decode inception ur:envelope/tpsotanshdhdcxehadtawfcyrtpt
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/lftpsotanshdhdcxjsdigtwneocm
 XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
@@ -21,7 +21,7 @@ XID(71274df1) [
     ]
 ]",
   "## decode inception ur:envelope/lftpsotanshdhdcxjsdigtwneocm
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/lftpsotanshdhdcxluotinhtfxvt
 XID(8ba3695a) [
     'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
@@ -29,7 +29,7 @@ XID(8ba3695a) [
     ]
 ]",
   "## decode inception ur:envelope/lftpsotanshdhdcxluotinhtfxvt
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/lrtpsotanshdhdcxluotinhtfxvt
 XID(8ba3695a) [
     'dereferenceVia': URI(btcr:01234567)
@@ -39,7 +39,7 @@ XID(8ba3695a) [
     ]
 ]",
   "## decode inception ur:envelope/lrtpsotanshdhdcxluotinhtfxvt
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
 XID(71274df1) [
     'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
@@ -53,7 +53,7 @@ XID(71274df1) [
     ]
 ]",
   "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/lntpsotanshdhdcxjsdigtwneocm
 XID(71274df1) [
     'delegate': {
@@ -90,7 +90,7 @@ XID(71274df1) [
     ]
 ]",
   "## decode inception ur:envelope/lntpsotanshdhdcxjsdigtwneocm
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/lttpsotanshdhdcxjsdigtwneocm
 XID(71274df1) [
     "customField": "customValue"
@@ -120,56 +120,56 @@ XID(71274df1) [
     ]
 ]",
   "## decode inception ur:envelope/lttpsotanshdhdcxjsdigtwneocm
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
 XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
         'allow': 'All'
     ]
-    'provenance': 1347571542([0, h'b16a7cbd27610028c72a768d50921dd8ea6bc762a7ec1d40'])
+    'provenance': ProvenanceMark(e7172891fa637942ebcd8dcc785a3b2bcd5b5594ebfd41a1cafa2e5c39e7fa9e)
 ]",
   "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
 XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
         'allow': 'All'
     ]
-    'provenance': 1347571542([1, h'b16a7cbd178ee0d48a0705c629d2b396675d31c6dc7245efe94fd18f1cd5835945e7f9cd01f2f243'])
+    'provenance': ProvenanceMark(1e01b7b97913ebadf3f8de976b1d22445ce757b14f0084f606c28e49d82e41f2)
 ]",
   "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
 XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
         'allow': 'All'
     ]
-    'provenance': 1347571542([2, h'b16a7cbd178ee0d41cadb0dcefdbe87d121f8c3a62db62944dc8b28f906d09c677bfaacc5df3913d1bd90b796641e55c29f6be13695f44f8c2caaaba35596d913bbb'])
+    'provenance': ProvenanceMark(a56def6f005ccf379607122e36f24c1a195378c0e11c827ffac4b7c99925b25e)
 ]",
   "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
 XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
         'allow': 'All'
     ]
-    'provenance': 1347571542([3, h'b16a7cbd178ee0d41cadb0dcefdbe87d6a41c85b41c551134ae8307f9203babc66e7ef6821f5fe3f4ac9b4754e64c3789845a661e394ab354808269d8ad1a118d3f44b8103daf8fabcf55cbdfe28341be4b99680d20ca00a5710da72032848ead9d5c39a0b5367c50fb00553d492a2a219a6'])
+    'provenance': ProvenanceMark(04fa345dea3fd5f19eae4f9c9875c3dbe6d2e8326e53f06095c7482af0615880)
 ]",
   "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/lstpsotanshdhdcxjsdigtwneocm
 XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
         'allow': 'All'
     ]
-    'provenance': 1347571542([2, h'af9613760f72635fbdb44a5a0a63c39f479aacdc37011f5a18361a9688740bc993d577c947229dcd7c5aeed35bb54771e29c3d2804742006c020'])
+    'provenance': ProvenanceMark(872c11c09269d2ed07db4655ae78d55f6a5b28dc9eed3c0221bdffe6c5b899f6)
 ]",
   "## decode inception ur:envelope/lstpsotanshdhdcxjsdigtwneocm
-throw:ENVELOPE_NOT_SIGNED",
+throw:EnvelopeNotSigned|envelope is not signed",
   "## decode none ur:envelope/tpsoihfyihjzjzjlbtzdvlvo
-throw:Bytewords error (invalid word)",
+throw:Decoder|UR decoder error (invalid word)",
   "## decode none ur:xid/notbytewords
-throw:Bytewords error (invalid word)",
+throw:Decoder|UR decoder error (invalid word)",
 ]
 `;
 
@@ -177,7 +177,7 @@ exports[`golden > mutation scripts 1`] = `
 [
   "## mutate privateKeyBase:7eb559bb keys×2: removeKey,removeKey,takeKey,takeKey
 removeKey=ok
-removeKey=throw:NOT_FOUND
+removeKey=throw:NotFound|item not found: key
 takeKey=2235523711230e76c752e7cab3383da13970a829bc507f505606e164eade7f65
 takeKey=undefined
 ===
@@ -189,7 +189,7 @@ XID(71274df1) [
   "## mutate privateKeyBase:7eb559bb keys×2: removeInceptionKey,removeInceptionKey,checkContainsKey,checkContainsKey
 removeInceptionKey=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8
 removeInceptionKey=undefined
-checkContainsKey=throw:KEY_NOT_FOUND_IN_DOCUMENT
+checkContainsKey=throw:KeyNotFoundInDocument|key not found in XID document: PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a)))
 checkContainsKey=ok
 ===
 XID(71274df1) [
@@ -201,7 +201,7 @@ XID(71274df1) [
   "## mutate privateKeyBase:7eb559bb keys×2: setNameForKey,setNameForKey,addKey,addKey
 setNameForKey=ok
 setNameForKey=ok
-addKey=throw:DUPLICATE
+addKey=throw:Duplicate|duplicate item: key
 addKey=ok
 ===
 XID(71274df1) [
@@ -218,11 +218,11 @@ XID(71274df1) [
     ]
 ]",
   "## mutate privateKeyBase:7eb559bb keys×2 services×1: removeKey,takeKey,removeService,removeKey,removeService,takeService
-removeKey=throw:STILL_REFERENCED
+removeKey=throw:StillReferenced|item is still referenced: key
 takeKey=b67d8052f1db8d6b572b9abe91670cc26c157490b260f11f26b3cf47d01ac802
 removeService=ok
-removeKey=throw:NOT_FOUND
-removeService=throw:NOT_FOUND
+removeKey=throw:NotFound|item not found: key
+removeService=throw:NotFound|item not found: service
 takeService=undefined
 ===
 XID(71274df1) [
@@ -233,7 +233,7 @@ XID(71274df1) [
 ]",
   "## mutate privateKeyBase:7eb559bb keys×2 services×1: checkServices,addService,addService,addService,addService
 checkServices=ok
-addService=throw:DUPLICATE
+addService=throw:Duplicate|duplicate item: service
 addService=ok
 addService=ok
 addService=ok
@@ -263,12 +263,12 @@ XID(71274df1) [
 ]",
   "## mutate privateKeyBase:7eb559bb delegates×1 services×1: checkContainsDelegate,removeDelegate,takeDelegate,removeService,removeDelegate,takeDelegate,checkContainsDelegate
 checkContainsDelegate=ok
-removeDelegate=throw:STILL_REFERENCED
+removeDelegate=throw:StillReferenced|item is still referenced: delegate
 takeDelegate=8ba3695a
 removeService=ok
-removeDelegate=throw:NOT_FOUND
+removeDelegate=throw:NotFound|item not found: delegate
 takeDelegate=undefined
-checkContainsDelegate=throw:DELEGATE_NOT_FOUND_IN_DOCUMENT
+checkContainsDelegate=throw:DelegateNotFoundInDocument|delegate not found in XID document: XID(8ba3695a)
 ===
 XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
@@ -304,7 +304,7 @@ nextMark=ok
 nextMark=ok
 clone=ok
 clearProvenance=ok
-nextMark=throw:NO_PROVENANCE_MARK
+nextMark=throw:NoProvenanceMark|no provenance mark to advance
 ===
 XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
@@ -312,7 +312,7 @@ XID(71274df1) [
     ]
 ]",
   "## mutate privateKeyBase:7eb559bb: nextMark
-nextMark=throw:NO_PROVENANCE_MARK
+nextMark=throw:NoProvenanceMark|no provenance mark to advance
 ===
 XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
@@ -327,7 +327,7 @@ XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
         'allow': 'All'
     ]
-    'provenance': 1347571542([1, h'558dbfc6536b2968ecc011f86f032d24f52b384e87a29aa6ec4c33ed2884f323'])
+    'provenance': ProvenanceMark(2c4ca5f83803166663f9f8cedacc1946b570632324b377f9be8bdfba3fae9f21)
 ]",
 ]
 `;
@@ -356,7 +356,7 @@ edges=0
 provenance=-
 generator=-
 roundtrip=true
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc xid:7eb559bb/schnorr [omit/omit/none]
 format=XID(3101d9f3)
 cbor=d8c8d8c9d99c5858203101d9f31ac0a9d5644fc2438c1d5ca32673937480bb6ebdcc6d80845d433cad
@@ -375,7 +375,7 @@ edges=0
 provenance=-
 generator=-
 roundtrip=true
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc privateKeyBase:7eb559bb [omit/omit/none]
 format=XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
@@ -398,7 +398,7 @@ edges=0
 provenance=-
 generator=-
 roundtrip=false
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc publicKeys:518684c5 [omit/omit/none]
 format=XID(8ba3695a) [
     'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
@@ -421,7 +421,7 @@ edges=0
 provenance=-
 generator=-
 roundtrip=true
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc publicKeys:518684c5 res×2 [omit/omit/none]
 format=XID(8ba3695a) [
     'dereferenceVia': URI(btcr:01234567)
@@ -446,7 +446,7 @@ edges=0
 provenance=-
 generator=-
 roundtrip=true
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc privateKeyBase:7eb559bb keys×1 [omit/omit/none]
 format=XID(71274df1) [
     'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
@@ -475,7 +475,7 @@ edges=0
 provenance=-
 generator=-
 roundtrip=false
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc privateKeyBase:7eb559bb keys×1 delegates×2 services×1 [omit/omit/none]
 format=XID(71274df1) [
     'delegate': {
@@ -527,7 +527,7 @@ edges=0
 provenance=-
 generator=-
 roundtrip=false
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc privateKeyBase:7eb559bb attachments×2 edges×2 custom×1 [omit/omit/none]
 format=XID(71274df1) [
     "customField": "customValue"
@@ -572,13 +572,13 @@ edges=2
 provenance=-
 generator=-
 roundtrip=true
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc privateKeyBase:7eb559bb genesis(low "test" 2025-01-01T00:00:00Z info) [omit/omit/none]
 format=XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
         'allow': 'All'
     ]
-    'provenance': 1347571542([0, h'b16a7cbd27610028c72a768d50921dd8ea6bc762a7ec1d40'])
+    'provenance': ProvenanceMark(e7172891fa637942ebcd8dcc785a3b2bcd5b5594ebfd41a1cafa2e5c39e7fa9e)
 ]
 cbor=d8c883d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca11840d8c9da50524f5682005818b16a7cbd27610028c72a768d50921dd8ea6bc762a7ec1d40a10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846
 ur=ur:envelope/lstpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoycsfztpsotngdgmgwhflfaehdcspaimkerydihsaedestdrkolggdmocatpwdjestidoswpcafzoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgmhgyjnfr
@@ -596,13 +596,13 @@ edges=0
 provenance=ur:provenance/lfaehdcspaimkerydihsaedestdrkolggdmocatpwdjestidoswpcafzplayclwf
 generator=nextSeq=1
 roundtrip=false
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc privateKeyBase:7eb559bb genesis(medium "test" 2025-01-01T00:00:00Z info) [omit/omit/none]
 format=XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
         'allow': 'All'
     ]
-    'provenance': 1347571542([1, h'b16a7cbd178ee0d48a0705c629d2b396675d31c6dc7245efe94fd18f1cd5835945e7f9cd01f2f243'])
+    'provenance': ProvenanceMark(1e01b7b97913ebadf3f8de976b1d22445ce757b14f0084f606c28e49d82e41f2)
 ]
 cbor=d8c883d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846a11840d8c9da50524f5682015828b16a7cbd178ee0d48a0705c629d2b396675d31c6dc7245efe94fd18f1cd5835945e7f9cd01f2f243
 ur=ur:envelope/lstpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgoycsfztpsotngdgmgwhflfadhddepaimkerychmnvttyleatahswdttdqdmtiohlehswuojpfewswlgwttmycetllshkfevdytsnadwzwzfxiojkcega
@@ -620,13 +620,13 @@ edges=0
 provenance=ur:provenance/lfadhddepaimkerychmnvttyleatahswdttdqdmtiohlehswuojpfewswlgwttmycetllshkfevdytsnadwzwzfxdtotdevt
 generator=nextSeq=1
 roundtrip=false
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc privateKeyBase:7eb559bb genesis(quartile "test" 2025-01-01T00:00:00Z info) [omit/omit/none]
 format=XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
         'allow': 'All'
     ]
-    'provenance': 1347571542([2, h'b16a7cbd178ee0d41cadb0dcefdbe87d121f8c3a62db62944dc8b28f906d09c677bfaacc5df3913d1bd90b796641e55c29f6be13695f44f8c2caaaba35596d913bbb'])
+    'provenance': ProvenanceMark(a56def6f005ccf379607122e36f24c1a195378c0e11c827ffac4b7c99925b25e)
 ]
 cbor=d8c883d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846a11840d8c9da50524f5682025842b16a7cbd178ee0d41cadb0dcefdbe87d121f8c3a62db62944dc8b28f906d09c677bfaacc5df3913d1bd90b796641e55c29f6be13695f44f8c2caaaba35596d913bbb
 ur=ur:envelope/lstpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgoycsfztpsotngdgmgwhflfaohdfwpaimkerychmnvttycepmpfuowsuyvskibgctlkftiduyidmwgtspprmymhjnasswktrspksfhlwfmefscwtabdkkiyfpvwhhdtynrnbwinhefyyasasgpkrdechkjnmefrrktkghashg
@@ -644,13 +644,13 @@ edges=0
 provenance=ur:provenance/lfaohdfwpaimkerychmnvttycepmpfuowsuyvskibgctlkftiduyidmwgtspprmymhjnasswktrspksfhlwfmefscwtabdkkiyfpvwhhdtynrnbwinhefyyasasgpkrdechkjnmefrrkgwfxlybt
 generator=nextSeq=1
 roundtrip=false
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc privateKeyBase:7eb559bb genesis(high "test" 2025-01-01T00:00:00Z info) [omit/omit/none]
 format=XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
         'allow': 'All'
     ]
-    'provenance': 1347571542([3, h'b16a7cbd178ee0d41cadb0dcefdbe87d6a41c85b41c551134ae8307f9203babc66e7ef6821f5fe3f4ac9b4754e64c3789845a661e394ab354808269d8ad1a118d3f44b8103daf8fabcf55cbdfe28341be4b99680d20ca00a5710da72032848ead9d5c39a0b5367c50fb00553d492a2a219a6'])
+    'provenance': ProvenanceMark(04fa345dea3fd5f19eae4f9c9875c3dbe6d2e8326e53f06095c7482af0615880)
 ]
 cbor=d8c883d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca11840d8c9da50524f5682035872b16a7cbd178ee0d41cadb0dcefdbe87d6a41c85b41c551134ae8307f9203babc66e7ef6821f5fe3f4ac9b4754e64c3789845a661e394ab354808269d8ad1a118d3f44b8103daf8fabcf55cbdfe28341be4b99680d20ca00a5710da72032848ead9d5c39a0b5367c50fb00553d492a2a219a6a10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846
 ur=ur:envelope/lstpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoycsfztpsotngdgmgwhflfaxhdjppaimkerychmnvttycepmpfuowsuyvskiimfpsphpfpskgybwgevsdylbmoaxrdrfiyvdwsisclykzefhgesoqzkpgliesrksmkfeolhsvlmwpyecfdaydsntlettoycstewkgrlyaxtnyazsrfykhhryzedeeecwverhmtlatdbnnbbkhgbetnjpaxdefdwdtatlsrnybdguioskbspfahgutymooeoecfoloyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgfmprwkox
@@ -668,13 +668,13 @@ edges=0
 provenance=ur:provenance/lfaxhdjppaimkerychmnvttycepmpfuowsuyvskiimfpsphpfpskgybwgevsdylbmoaxrdrfiyvdwsisclykzefhgesoqzkpgliesrksmkfeolhsvlmwpyecfdaydsntlettoycstewkgrlyaxtnyazsrfykhhryzedeeecwverhmtlatdbnnbbkhgbetnjpaxdefdwdtatlsrnybdguioskbspfahgutymooeoecfolurehvtbk
 generator=nextSeq=1
 roundtrip=false
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
   "## doc privateKeyBase:7eb559bb genesis(quartile ffffffff 2025-01-01T00:00:00Z) [omit/omit/none]
 format=XID(71274df1) [
     'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
         'allow': 'All'
     ]
-    'provenance': 1347571542([2, h'af9613760f72635fbdb44a5a0a63c39f479aacdc37011f5a18361a9688740bc993d577c947229dcd7c5aeed35bb54771e29c3d2804742006c020'])
+    'provenance': ProvenanceMark(872c11c09269d2ed07db4655ae78d55f6a5b28dc9eed3c0221bdffe6c5b899f6)
 ]
 cbor=d8c883d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca11840d8c9da50524f568202583aaf9613760f72635fbdb44a5a0a63c39f479aacdc37011f5a18361a9688740bc993d577c947229dcd7c5aeed35bb54771e29c3d2804742006c020a10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846
 ur=ur:envelope/lstpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoycsfztpsotngdgmgwhflfaohdftpemtbwkobsjpiaheryqzgehtbkiasrneflnypsuoemadcthtcsencymtlojybdsomutlktsoflcpntsnkehtwytehprefljsvonsfsdeaajycxamrtcxoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgwfrffdhh
@@ -692,6 +692,6 @@ edges=0
 provenance=ur:provenance/lfaohdftpemtbwkobsjpiaheryqzgehtbkiasrneflnypsuoemadcthtcsencymtlojybdsomutlktsoflcpntsnkehtwytehprefljsvonsfsdeaajycxamrtcxskcetnsn
 generator=nextSeq=1
 roundtrip=false
-verify=throw:ENVELOPE_NOT_SIGNED",
+verify=throw:EnvelopeNotSigned|envelope is not signed",
 ]
 `;

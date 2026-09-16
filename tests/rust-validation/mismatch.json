@@ -1,0 +1,12 @@
+{
+ "count": 1,
+ "vectors": [
+  {
+   "name": "privileges (mismatch: one value flipped)",
+   "recipe": {
+    "k": "privileges"
+   },
+   "expect": "All=All(71) 'All'\nAuth=Authorize(71) 'Authorize'\nSign=Sign(72) 'Sign'\nEncrypt=Encrypt(73) 'Encrypt'\nElide=Elide(74) 'Elide'\nIssue=Issue(75) 'Issue'\nAccess=Access(76) 'Access'\nDelegate=Delegate(80) 'Delegate'\nVerify=Verify(81) 'Verify'\nUpdate=Update(82) 'Update'\nTransfer=Transfer(83) 'Transfer'\nElect=Elect(84) 'Elect'\nBurn=Burn(85) 'Burn'\nRevoke=Revoke(86) 'Revoke'"
+  }
+ ]
+}

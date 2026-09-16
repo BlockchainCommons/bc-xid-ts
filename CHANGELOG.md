@@ -1,119 +1,26 @@
 # Changelog
 
+## 1.0.0-beta.2 - 2026-09-16
+
+### Changed (breaking)
+
+- **Every decode failure is an `XIDError`.** A sibling error raised inside `XIDDocument.fromEnvelope`, `Key.fromEnvelope`, `Service.fromEnvelope`, `Delegate.fromEnvelope`, `Provenance.fromEnvelope`, `Permissions.fromEnvelope`, `privilegeFromEnvelope` or the CBOR and UR decoders is wrapped with the code the reference gives it: an envelope error is `EnvelopeParsing`, a dcbor or components decode error is `Cbor`, a provenance-mark error is `ProvenanceMark`. The message is the reference's `Display` of the wrapping variant (`envelope parsing error`, `CBOR error`, `provenance mark error`); the sibling error is `cause` and its message is `details.message`. A constructor's own input (`Service.from("")`, `addResolutionMethod`, `addEndpoint`, `addKeyReferenceHex`) still raises the sibling's error.
+- **Parser codes follow the reference.** A subject that is not a leaf, a `'dereferenceVia'` object with assertions and a `'delegate'` that is not wrapped are `EnvelopeParsing` (not `InvalidXid`, `InvalidResolutionMethod`, or an escaping envelope error); an `'allow'`/`'deny'` object that is not a known value is `EnvelopeParsing` (not `UnknownPrivilege`); a `'capability'` or `'name'` that is not text is `Cbor` (not `EnvelopeParsing`); a missing or repeated `'salt'` is `EnvelopeParsing` with the envelope's `NonexistentPredicate`/`AmbiguousPredicate` as the cause. `Key.fromEnvelope` no longer reads a second or non-text `'nickname'` as empty: two are `EnvelopeParsing`, a non-text one is `EnvelopeParsing` over the envelope's `Cbor`. A wrong password still leaves locked material locked, but a failure after a successful unlock now propagates.
+- **`UnknownKeyReference`/`UnknownDelegateReference` render the reference as `Reference(<short hex>)`** in the message and `details.reference`, as the reference's `Display` does.
+- **CBOR decoders are strict.** `XIDDocument.fromCbor` (new) requires the `xid` tag; `XIDDocument.fromUntaggedCbor` (new, public) takes the untagged form only and rejects a tagged value; `XIDDocument.codec.decode` is `fromCbor`. A rejection is `Cbor` with the dcbor error's message, or the document error's message when the envelope decodes but the document does not, as the reference's `from_untagged_cbor` flattens it. `XIDDocument.fromUR` reports a UR of another type as `Cbor` (`expected UR type xid, but found …`).
+- **`XIDError` is on the dcbor error standard.** `XIDErrorDetailsByCode`, `XIDErrorDetailsFor<C>` and `XIDErrorTyped<C>` type `details` per code; every factory returns its narrowed type; `is(code)` narrows; `isXIDError` is an `instanceof` check (a decorated `Error` or a plain object with a `code` is no longer one). The detail interfaces (`ItemDetails`, `WrappedDetails`, …) are aliases of `XIDErrorDetailsFor<…>`.
+- **Options objects and shape.** `inceptionPrivateKeysFromEnvelope(envelope, { password })`, `addAttachment({ payload, vendor, conformsTo })`, `random({ rng, genesis })` (the genesis was a positional second argument), `Delegate.fromEnvelope(envelope, { parseDocument })` with `XIDDocument.fromEnvelope` as the default parser. `Provenance.takeGenerator()` returns whether a generator was held. The internal `PrivateKeyData` and `GeneratorData` unions are no longer exported; `hasPrivateKeys`/`hasEncryptedPrivateKeys` and `hasGenerator`/`hasEncryptedGenerator` say what is held. `Permissions.allow`/`deny` copy out (as `resolutionMethods` and `endpoints` already did); `extraAssertions` copies out. `edgesMut()` and `getEdge()` stay: envelope's `Edgeable` names them.
+- **The JavaScript input domain is checked.** `Key.from(pub, { privateKeys: null })`, a genesis without exactly one of `passphrase`/`seed`, an invalid `Date`, an unknown `resolution`, an unknown `verify`/`privateKeys`/`generator`/`sign` string and a missing `inceptionKey` are `TypeError`s; a seed of the wrong length is `ProvenanceMark` (a 40-byte seed is no longer cut to 32). `XIDGenesis.seed` also takes a `ProvenanceSeed`.
+- **`attachments` and `edges()` are envelope's `Attachments` and `Edges`** with their current surface: `size`, and iteration yields the envelopes (`for (const edge of doc.edges())`). `iter()`, `isEmpty()` and `len()` are gone, as they are from envelope.
+- **Formatting needs `registerTags()`.** Envelope's global format context installs no summarizers until they are registered; `registerTags()` from `@blockchaincommons/provenance-mark` registers envelope's and the provenance-mark summariser, so `XID(…)`, `PublicKeys(…)` and `ProvenanceMark(…)` render, as the reference's tests call `bc_envelope::register_tags()` and `provenance_mark::register_tags()`. The test setup file (`tests/setup.ts`) and the vector generator do so.
+- A mark that does not decode inside a provenance envelope is `Cbor` with the dcbor error as its cause (`Cbor[WrongType]` for a leaf that is not a tagged mark), as the reference's `ProvenanceMark::try_from(CBOR)` reports it; provenance-mark's own codes are the reference's variant names (`Cbor`, `Envelope`, …) since its 1.0.0-beta.1, and `details.message` of a `ProvenanceMark` error carries them unchanged.
+
+### Added
+
+- `Key.addNickname` (the reference's `HasNickname::add_nickname`): sets the nickname once, `Duplicate` when set, `EmptyValue` when empty.
+- `XIDDocument.fromCbor`, `XIDDocument.fromUntaggedCbor`, `XIDDocumentCodec`, `XIDRandomOptions`, `XIDInceptionKeyPair`, `EncryptOptions`, `AttachmentInput`, `DelegateParseOptions`.
+- Every public member has a doc comment (`typedoc` validates `notDocumented`); the API docs build to `docs/api`, the ADRs in `docs/adr` are tracked; a `bench` script.
+
 ## 1.0.0-beta.1
 
-### Changed
-
-- **API redesign.** `XIDDocument.from({ inceptionKey, genesis })`/`random`, getters for every read, `key`/`delegate`/`service`/`attachment` lookups, `expect…` checks, removers that return the removed item, `toEnvelope({ privateKeys, generator, sign })`, `fromEnvelope(envelope, { password, verify })`, `nextProvenanceMark({ … })`, `toCbor`/`fromCbor`/`codec`/`toUR`/`fromUR`; `Key.from`, `Service.from`, `Delegate.from`, `Provenance.from`, `Permissions.from` with getters and `allow`/`deny`; string unions for the private-key, generator, signing and verification options and for `Privilege`; `XIDError` with the reference's variant names as `code` and typed `details`. See [MIGRATION.md](./MIGRATION.md).
-- Equality compares every field, private keys, salts and the generator included, as the reference does.
-- Attachments render single-wrapped (`'attachment': {…}`), as the reference does; the pre-redesign envelope wrapped them twice.
-- Verified against the published pre-redesign packages (`@bcts/xid` 1.0.0-beta.6, frozen in `tests/baseline`) and `bc-xid-rust` 0.23.0 (`tests/rust-validation`: 184 match, 19 expected divergences, 0 mismatches).
-- The delegate/document cycle is broken by an explicit parser callback; the module graph has no import cycles (pinned by a test).
-
-### Removed
-
-- `@blockchaincommons/dcbor-compat` dependency; `Shared`, the permission and nickname mixins, `registerXIDDocumentClass`, `XIDResult`, `VERSION`, and the `XID`/`Attachments`/`Edges`/`Edgeable` re-exports.
-
-Extracted from the [`paritytech/bcts`](https://github.com/paritytech/bcts) monorepo, where this library was published as `@bcts/xid`. See the appendix of [MIGRATION.md](./MIGRATION.md) for the rename.
-
----
-
-## History as `@bcts/xid`
-
-## [1.0.0-beta.6] - 2026-07-29
-
-### Changed
-
-- Workspace version bump
-
-## [1.0.0-beta.5] - 2026-07-01
-
-### Changed
-
-- Workspace version bump
-
-## [1.0.0-beta.4] - 2026-06-28
-
-### Changed
-
-- Dependency sync
-
-## [1.0.0-beta.3] - 2026-06-22
-
-### Changed
-
-- Dependencies bump
-
-## [1.0.0-beta.2] - 2026-06-16
-
-### Changed
-
-- Dependencies bump
-
-## [1.0.0-beta.1] - 2026-05-27
-
-### Added
-
-- `XIDDocument.extraAssertions()` accessor exposing preserved extension assertions (synced with `bc-xid` v0.23.0).
-
-### Changed
-
-- `XIDDocument` now preserves unrecognized top-level assertions through parse → mutate → serialize round-trips instead of throwing `UNEXPECTED_PREDICATE`. `equals()` and `clone()` account for the preserved assertions.
-- `XIDDocument.isEmpty()` now also accounts for services, attachments, edges, and extension assertions.
-
-## [1.0.0-beta.0] - 2026-04-27
-
-### Changed
-
-- Workspace version bump
-
-## [1.0.0-alpha.23] - 2026-04-24
-
-### Changed
-
-- Removed redundant `as unknown as EnvelopeEncodableValue` casts in `key.ts`, `provenance.ts`, `service.ts`, and `xid-document.ts` now that `KnownValue` satisfies `EnvelopeEncodableValue` directly.
-- Simplified the `Provenance` envelope-locking path in `provenance.ts` by dropping the unused intermediate cast around `lockSubject`.
-
-## [1.0.0-alpha.22] - 2026-03-01
-
-### Changed
-
-- Workspace version bump
-
-## [1.0.0-alpha.21] - 2026-02-27
-
-### Changed
-
-- Workspace version bump
-
-## [1.0.0-alpha.20] - 2026-02-12
-
-### Changed
-
-- Updated edge tests per BCR-2026-003: claim detail now placed on target object instead of edge subject
-
-## [1.0.0-alpha.19] - 2026-02-05
-
-### Changed
-
-- Workspace version bump
-
-## [1.0.0-alpha.18] - 2025-01-31
-
-### Added
-
-- **Edge support**: `XIDDocument` now supports edges via `@bcts/envelope` edge extension, including `addEdge()`, `removeEdge()`, `edges()`, `findEdges()` methods
-- **Attachment support**: `XIDDocument` now supports attachments via `@bcts/envelope` attachment extension
-- **Edge test suite** (`tests/edge.test.ts`): Comprehensive tests for edge creation, querying, and removal in XID documents
-- **Signing options**: New `signingPrivateKey` signing option type for direct `SigningPrivateKey` usage
-- **Key encryption tests**: Expanded tests for encrypting and decrypting private keys with passwords (Argon2id, PBKDF2, Scrypt)
-- **Provenance encryption tests**: Tests for encrypting/decrypting provenance generators with passwords
-
-### Changed
-
-- **XIDDocument**: Major expansion of the XID document implementation for Rust parity, including support for signed envelopes, key management, service endpoints, provenance marks, delegate management, and resolution management
-- **Key module**: Enhanced key encryption/decryption with support for multiple password derivation methods
-- **Provenance module**: Enhanced provenance mark management with encryption support
-- **Service module**: Improved service endpoint handling
-- **XIDSigningOptions**: Replaced `privateKeyBase` option with `signingPrivateKey` for more direct signing control
-- **Test timeouts**: Increased timeout for password-derivation tests to 30 seconds across `key.test.ts`, `edge.test.ts`, `provenance.test.ts`, and `xid-document.test.ts`
+- Initial beta implementation

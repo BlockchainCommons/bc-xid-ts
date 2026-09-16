@@ -57,3 +57,69 @@ jobs:
 
       - name: Check dependency hygiene
         run: bun run check:deps
+
+  rust-validation:
+    name: Cross-validate vectors against the Rust reference
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: bun install
+
+      # A home directory of the job's own: neither side may read the runner's
+      # ~/.known-values.
+      - name: Point HOME at an empty directory
+        run: |
+          mkdir -p "${{ runner.temp }}/home"
+          echo "HOME=${{ runner.temp }}/home" >> "$GITHUB_ENV"
+
+      # The stored outcomes must first equal the working tree's.
+      - name: Check the golden vectors against the working tree
+        run: bun run test:golden
+
+      # The pinned toolchain (tests/rust-validation/rust-toolchain.toml)
+      - name: Install the Rust toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal --no-self-update && rustup default 1.98.1
+
+      - name: Fetch the pinned reference crates
+        working-directory: tests/rust-validation
+        run: cargo fetch --locked
+
+      - name: Validate the golden vectors against bc-xid
+        working-directory: tests/rust-validation
+        run: cargo run --release --locked --offline -- ../vectors/vectors.json
+
+      # The comparison must bite: the committed one-vector fixture with a
+      # flipped value fails with exactly one MISMATCH; every outcome class is
+      # counted as designed; an unreadable recipe is unparsable.
+      - name: Check the harness fixtures
+        working-directory: tests/rust-validation
+        run: |
+          set +e
+          mismatch=$(cargo run --release --locked --offline --quiet -- mismatch.json 2>&1)
+          mismatch_status=$?
+          classes=$(cargo run --release --locked --offline --quiet -- fixtures/classes.json 2>&1)
+          classes_status=$?
+          malformed=$(cargo run --release --locked --offline --quiet -- fixtures/malformed.json 2>&1)
+          malformed_status=$?
+          set -e
+          printf '%s\n%s\n%s\n' "$mismatch" "$classes" "$malformed"
+          test "$mismatch_status" -eq 1
+          printf '%s\n' "$mismatch" | grep -q ' 1 MISMATCH$'
+          test "$classes_status" -eq 0
+          printf '%s\n' "$classes" | grep -q '^4 vectors - 1 match, 1 panic-mapped, 2 js-only (J3 1, J4 1), 0 unparsable, 0 MISMATCH$'
+          test "$malformed_status" -eq 1
+          printf '%s\n' "$malformed" | grep -q ', 1 unparsable, 0 MISMATCH$'

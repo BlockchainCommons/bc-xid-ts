@@ -1,12 +1,19 @@
 /**
- * Vector recipes (Phase 1.1): a document recipe language (inception key,
- * genesis mark, resolution methods, keys, delegates, services, attachments,
- * edges, custom assertions) rendered with every private-key, generator and
- * signing option; documents decoded from a UR with each verification mode;
- * mutation scripts; single keys and provenance values; the privilege
- * table. `materialize` runs a recipe through a `VectorApi` and returns one
- * outcome string, so the same recipe drives the golden file, the
- * differential and the Rust harness.
+ * Vector recipes: a document recipe language (inception key, genesis mark,
+ * resolution methods, keys, delegates, services, attachments, edges,
+ * custom assertions) rendered with every private-key, generator and
+ * signing option; documents decoded from a UR with each verification
+ * mode; mutation scripts; single keys and provenance values; the
+ * privilege table; hand-assembled envelopes, CBOR and URs fed to every
+ * decoder; the nickname adders; construction-time inputs; and the
+ * JavaScript input domain. `materialize` runs a recipe through a
+ * `VectorApi` and returns one outcome string, so the same recipe drives
+ * the golden file, the differential and the Rust harness.
+ *
+ * A rejection renders as `throw:<code>[<inner code>]|<message>`: the
+ * error's code (its class name when it has none), the code of the error
+ * it wraps for the codes whose reference variant wraps one, and the
+ * message. The Rust harness renders the reference's errors the same way.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -98,6 +105,8 @@ export interface DocSpec {
     kind: "publicKeys" | "privateKeyBase" | "privateKeys" | "xid";
     seed: string;
     scheme?: Scheme;
+    /** For `privateKeys`: the private keys come from this seed instead (a mismatched pair). */
+    privateSeed?: string;
   };
   genesis?: GenesisSpec;
   resolution?: string[];
@@ -144,13 +153,113 @@ export type Op =
   | ["clearProvenance"]
   | ["clone"];
 
+/** The known values a hand-assembled envelope names, by name and value. */
+export const KNOWN_VALUES: Record<string, number> = {
+  isA: 1,
+  note: 4,
+  key: 8,
+  dereferenceVia: 9,
+  name: 11,
+  salt: 15,
+  nickname: 24,
+  attachment: 50,
+  allow: 60,
+  deny: 61,
+  endpoint: 62,
+  delegate: 63,
+  provenance: 64,
+  privateKey: 65,
+  service: 66,
+  capability: 67,
+  provenanceGenerator: 68,
+  edge: 701,
+  All: 70,
+  Sign: 72,
+};
+export type KnownName = keyof typeof KNOWN_VALUES;
+
+/**
+ * An envelope assembled by hand: a leaf, a known value, a sibling value
+ * built from a seed, a node with assertions, a wrapped, elided or signed
+ * envelope, or a document's envelope.
+ */
+export type Obj =
+  | { t: "text"; v: string }
+  | { t: "int"; v: number }
+  | { t: "kv"; name: KnownName }
+  | { t: "uri"; v: string }
+  | { t: "bytes"; hex: string }
+  /** The XID of the document whose inception seed this is. */
+  | { t: "xid"; seed: string }
+  /** The reference of the public keys of this seed. */
+  | { t: "ref"; seed: string; scheme?: Scheme }
+  /** The reference of the XID of this seed's document. */
+  | { t: "xidRef"; seed: string }
+  | { t: "pub"; seed: string; scheme?: Scheme }
+  | { t: "priv"; seed: string; scheme?: Scheme }
+  | { t: "salt"; hex: string }
+  | { t: "mark"; genesis: GenesisSpec }
+  /** The envelope of the generator that produced a genesis mark. */
+  | { t: "generatorEnv"; genesis: GenesisSpec }
+  /** A document's envelope (private keys and generator omitted, unsigned). */
+  | { t: "doc"; doc: DocSpec }
+  | { t: "node"; subject: Obj; assertions: AssertionSpec[] }
+  | { t: "wrapped"; inner: Obj }
+  | { t: "elided"; inner: Obj }
+  /** `inner.sign(privateKeys)`: wrapped, with a signature by this seed's Schnorr keys. */
+  | { t: "signed"; inner: Obj; seed: string };
+export interface AssertionSpec {
+  pred: Obj;
+  obj: Obj;
+  /** Assertions on the assertion envelope itself (a `'salt'` beside a `'privateKey'`). */
+  with?: AssertionSpec[];
+  /** The assertion is added elided. */
+  elide?: boolean;
+}
+
+export type DomainClass = "J1" | "J2" | "J3" | "J4";
+
 export type Recipe =
   | { k: "doc"; doc: DocSpec; out?: OutputSpec }
   | { k: "decode"; ur: string; verify: Verify; password?: string }
   | { k: "mutate"; doc: DocSpec; ops: Op[] }
   | { k: "key"; key: KeySpec; priv: PrivOpt }
   | { k: "provenance"; genesis: GenesisSpec; gen: GenOpt; password?: string }
-  | { k: "privileges" };
+  | { k: "privileges" }
+  /**
+   * A document envelope assembled by hand and parsed: the `base`
+   * document's envelope (or a bare `subject`), the `assertions` added,
+   * signed by each of `sign`'s Schnorr keys in turn, wrapped once more, the
+   * `outer` assertions added, then `fromEnvelope` with `verify` and `password`.
+   */
+  | {
+      k: "docEnvelope";
+      base?: DocSpec;
+      subject?: Obj;
+      assertions?: AssertionSpec[];
+      sign?: string[];
+      wrap?: boolean;
+      outer?: AssertionSpec[];
+      verify?: Verify;
+      password?: string;
+    }
+  | { k: "keyEnvelope"; subject: Obj; assertions?: AssertionSpec[]; password?: string }
+  | { k: "serviceEnvelope"; subject: Obj; assertions?: AssertionSpec[] }
+  | { k: "provenanceEnvelope"; subject: Obj; assertions?: AssertionSpec[]; password?: string }
+  /** CBOR bytes given to the tagged decoder, the untagged decoder or the codec. */
+  | { k: "cbor"; hex: string; via: "tagged" | "untagged" | "codec" }
+  /** A UR string parsed and given to `fromUR`. */
+  | { k: "ur"; s: string }
+  /** `addNickname`/`setNickname` in sequence on a fresh key. */
+  | { k: "nickname"; ops: ["add" | "set", string][] }
+  /** A caller's input to a constructor, outside any decoder. */
+  | {
+      k: "construct";
+      op: "service" | "resolution" | "endpoint" | "keyRefHex" | "delegateRefHex";
+      v: string;
+    }
+  /** The JavaScript input domain; the reference has no analogue (`js-only`). */
+  | { k: "domain"; case: string; cls: DomainClass };
 export type Outcome = string;
 
 /** What one rendered document reports, in a fixed order. */
@@ -174,7 +283,7 @@ export interface DocOutputs {
   generator: string;
   /** `fromEnvelope` of the output (with the password) equals the document. */
   roundtrip: string;
-  /** `fromEnvelope` with inception-key verification: ok, or the error code. */
+  /** `fromEnvelope` with inception-key verification: ok, or the error. */
   verify: string;
 }
 
@@ -185,8 +294,18 @@ export interface VectorApi {
   key(spec: KeySpec, priv: PrivOpt): string;
   provenance(genesis: GenesisSpec, gen: GenOpt, password: string | undefined): string;
   privileges(): string;
-  /** The error variant name. */
-  errorCode(e: unknown): string | undefined;
+  docEnvelope(r: Extract<Recipe, { k: "docEnvelope" }>): string;
+  keyEnvelope(r: Extract<Recipe, { k: "keyEnvelope" }>): string;
+  serviceEnvelope(r: Extract<Recipe, { k: "serviceEnvelope" }>): string;
+  provenanceEnvelope(r: Extract<Recipe, { k: "provenanceEnvelope" }>): string;
+  cbor(hex: string, via: "tagged" | "untagged" | "codec"): string;
+  ur(s: string): string;
+  nickname(ops: ["add" | "set", string][]): string;
+  construct(op: Extract<Recipe, { k: "construct" }>["op"], v: string): string;
+  domain(name: string): string;
+  /** The error's code, with the wrapped error's code in brackets where the reference wraps one. */
+  errorCode(e: unknown): string;
+  errorMessage(e: unknown): string;
 }
 
 export const hex = (u: Uint8Array): string => Buffer.from(u).toString("hex");
@@ -202,7 +321,7 @@ const optName = (o: PrivOpt | undefined): string =>
 const signName = (o: SignOpt | undefined): string =>
   o === undefined ? "none" : typeof o === "string" ? o : `sign(${o.seed.slice(0, 8)})`;
 export const docName = (d: DocSpec): string =>
-  `${d.inception.kind}:${d.inception.seed.slice(0, 8)}${d.inception.scheme ? `/${d.inception.scheme}` : ""}` +
+  `${d.inception.kind}:${d.inception.seed.slice(0, 8)}${d.inception.privateSeed ? `+${d.inception.privateSeed.slice(0, 8)}` : ""}${d.inception.scheme ? `/${d.inception.scheme}` : ""}` +
   (d.genesis
     ? ` genesis(${d.genesis.res ?? "high"} ${d.genesis.passphrase !== undefined ? `"${d.genesis.passphrase}"` : d.genesis.seed?.slice(0, 8)}${d.genesis.date ? ` ${d.genesis.date}` : ""}${d.genesis.info ? " info" : ""})`
     : "") +
@@ -213,6 +332,52 @@ export const docName = (d: DocSpec): string =>
   (d.attachments?.length ? ` attachments×${d.attachments.length}` : "") +
   (d.edges?.length ? ` edges×${d.edges.length}` : "") +
   (d.custom?.length ? ` custom×${d.custom.length}` : "");
+
+export const objName = (o: Obj): string => {
+  switch (o.t) {
+    case "text":
+      return JSON.stringify(o.v);
+    case "int":
+      return String(o.v);
+    case "kv":
+      return `'${o.name}'`;
+    case "uri":
+      return `uri(${o.v})`;
+    case "bytes":
+      return `h'${o.hex.slice(0, 16)}${o.hex.length > 16 ? "…" : ""}'`;
+    case "xid":
+      return `xid(${o.seed.slice(0, 8)})`;
+    case "ref":
+      return `ref(${o.seed.slice(0, 8)}${o.scheme ? `/${o.scheme}` : ""})`;
+    case "xidRef":
+      return `xidRef(${o.seed.slice(0, 8)})`;
+    case "pub":
+      return `pub(${o.seed.slice(0, 8)}${o.scheme ? `/${o.scheme}` : ""})`;
+    case "priv":
+      return `priv(${o.seed.slice(0, 8)}${o.scheme ? `/${o.scheme}` : ""})`;
+    case "salt":
+      return `salt(${o.hex.slice(0, 8)})`;
+    case "mark":
+      return `mark(${o.genesis.res ?? "high"})`;
+    case "generatorEnv":
+      return `generator(${o.genesis.res ?? "high"})`;
+    case "doc":
+      return `doc(${docName(o.doc)})`;
+    case "node":
+      return `${objName(o.subject)}[${o.assertions.map(assertionName).join(",")}]`;
+    case "wrapped":
+      return `{${objName(o.inner)}}`;
+    case "elided":
+      return `elided(${objName(o.inner)})`;
+    case "signed":
+      return `signed(${objName(o.inner)},${o.seed.slice(0, 8)})`;
+  }
+};
+export const assertionName = (a: AssertionSpec): string =>
+  `${a.elide === true ? "elided " : ""}${objName(a.pred)}:${objName(a.obj)}` +
+  (a.with === undefined ? "" : `[${a.with.map(assertionName).join(",")}]`);
+const assertionsName = (as: AssertionSpec[] | undefined): string =>
+  as === undefined || as.length === 0 ? "" : ` +${as.map(assertionName).join(",")}`;
 
 export function recipeName(r: Recipe): string {
   switch (r.k) {
@@ -228,13 +393,65 @@ export function recipeName(r: Recipe): string {
       return `provenance ${r.genesis.res ?? "high"} ${r.genesis.passphrase !== undefined ? `"${r.genesis.passphrase}"` : r.genesis.seed?.slice(0, 8)} [${optName(r.gen)}]${r.password !== undefined ? " pw" : ""}`;
     case "privileges":
       return "privileges";
+    case "docEnvelope":
+      return (
+        `docEnvelope ${r.base !== undefined ? docName(r.base) : r.subject !== undefined ? objName(r.subject) : "?"}` +
+        assertionsName(r.assertions) +
+        (r.sign !== undefined ? ` signed(${r.sign.map((x) => x.slice(0, 8)).join(",")})` : "") +
+        (r.wrap === true ? " wrapped" : "") +
+        (r.outer !== undefined ? ` outer${assertionsName(r.outer)}` : "") +
+        ` [${r.verify ?? "none"}${r.password !== undefined ? " pw" : ""}]`
+      );
+    case "keyEnvelope":
+      return `keyEnvelope ${objName(r.subject)}${assertionsName(r.assertions)}${r.password !== undefined ? " [pw]" : ""}`;
+    case "serviceEnvelope":
+      return `serviceEnvelope ${objName(r.subject)}${assertionsName(r.assertions)}`;
+    case "provenanceEnvelope":
+      return `provenanceEnvelope ${objName(r.subject)}${assertionsName(r.assertions)}${r.password !== undefined ? " [pw]" : ""}`;
+    case "cbor":
+      return `cbor ${r.via} ${r.hex.slice(0, 24)}${r.hex.length > 24 ? "…" : ""}`;
+    case "ur":
+      return `ur ${r.s.slice(0, 40)}`;
+    case "nickname":
+      return `nickname ${r.ops.map(([op, v]) => `${op}(${JSON.stringify(v)})`).join(",")}`;
+    case "construct":
+      return `construct ${r.op}(${JSON.stringify(r.v)})`;
+    case "domain":
+      return `domain ${r.case} (${r.cls})`;
   }
 }
 
-const render = (o: Record<string, string>): string =>
+const objUsesSalt = (o: Obj): boolean =>
+  o.t === "salt" ||
+  (o.t === "node" && (objUsesSalt(o.subject) || o.assertions.some(assertionUsesSalt))) ||
+  ((o.t === "wrapped" || o.t === "elided" || o.t === "signed") && objUsesSalt(o.inner));
+const assertionUsesSalt = (a: AssertionSpec): boolean =>
+  objUsesSalt(a.pred) || objUsesSalt(a.obj) || (a.with ?? []).some(assertionUsesSalt);
+
+/**
+ * The frozen bundle cannot decode raw CBOR bytes, exports no `Salt` and has
+ * no JavaScript-domain guards to compare.
+ */
+export const isBaselineSupported = (r: Recipe): boolean => {
+  if (r.k === "cbor" || r.k === "domain") return false;
+  if (r.k === "docEnvelope")
+    return !(
+      (r.subject !== undefined && objUsesSalt(r.subject)) ||
+      (r.assertions ?? []).some(assertionUsesSalt) ||
+      (r.outer ?? []).some(assertionUsesSalt)
+    );
+  if (r.k === "keyEnvelope" || r.k === "serviceEnvelope" || r.k === "provenanceEnvelope")
+    return !(objUsesSalt(r.subject) || (r.assertions ?? []).some(assertionUsesSalt));
+  return true;
+};
+
+export const render = (o: Record<string, string>): string =>
   Object.keys(o)
     .map((k) => `${k}=${o[k]}`)
     .join("\n");
+
+export const thrown = (api: VectorApi, e: unknown): string =>
+  `throw:${api.errorCode(e)}|${api.errorMessage(e)}`;
 
 export function materialize(api: VectorApi, r: Recipe): Outcome {
   try {
@@ -251,29 +468,43 @@ export function materialize(api: VectorApi, r: Recipe): Outcome {
         return api.provenance(r.genesis, r.gen, r.password);
       case "privileges":
         return api.privileges();
+      case "docEnvelope":
+        return api.docEnvelope(r);
+      case "keyEnvelope":
+        return api.keyEnvelope(r);
+      case "serviceEnvelope":
+        return api.serviceEnvelope(r);
+      case "provenanceEnvelope":
+        return api.provenanceEnvelope(r);
+      case "cbor":
+        return api.cbor(r.hex, r.via);
+      case "ur":
+        return api.ur(r.s);
+      case "nickname":
+        return api.nickname(r.ops);
+      case "construct":
+        return api.construct(r.op, r.v);
+      case "domain":
+        return api.domain(r.case);
     }
   } catch (e) {
-    return `throw:${api.errorCode(e) ?? engineNeutral(e)}`;
+    return thrown(api, e);
   }
 }
 
-/** `try` a step and report ok, a value, or the error code. */
+/** `try` a step and report ok, a value, or the error. */
 export const attempt = (api: VectorApi, f: () => string | undefined | void): string => {
   try {
     const v = f();
     return v === undefined ? "ok" : v;
   } catch (e) {
-    return `throw:${api.errorCode(e) ?? engineNeutral(e)}`;
+    return thrown(api, e);
   }
 };
 
-/** Engine errors (a TypeError from a bad recipe) word their messages per engine; report the name. */
-const engineNeutral = (e: unknown): string =>
-  e instanceof TypeError || e instanceof RangeError ? e.name : (e as Error).message;
-
 /**
  * The sibling operations an adapter needs, bound either to the frozen bundle
- * (the published pre-redesign siblings) or to the redesigned siblings.
+ * (the published siblings it inlines) or to the working tree's siblings.
  */
 export interface SiblingDeps {
   pkbFromSeed(seed: string): any;
@@ -299,690 +530,17 @@ export interface SiblingDeps {
   markNext(generator: any, date: Date, info: any | undefined): any;
   markUR(mark: any): string;
   generatorNextSeq(generator: any): number;
-}
-
-/**
- * Pre-redesign surface of this package (the working tree speaks it until
- * Phase 3 lands): `XIDDocument.new(inception, genesis)`, zero-argument
- * accessors, `toEnvelope(privOpt, genOpt, signOpt)`, enums for the options.
- */
-export function baselineAdapterFor(m: any, d: SiblingDeps): VectorApi {
-  const pkb = d.pkbFromSeed;
-  const pub = d.pub;
-  const priv = d.priv;
-  const privilege = (n: PrivilegeName): any => m.Privilege[n];
-  const permissions = (obj: any, allow?: PrivilegeName[], deny?: PrivilegeName[]): void => {
-    for (const p of allow ?? []) obj.permissions().addAllow(privilege(p));
-    for (const p of deny ?? []) obj.permissions().addDeny(privilege(p));
-  };
-  const genesis = (g: GenesisSpec | undefined): any => {
-    if (g === undefined) return { type: "none" };
-    const common = {
-      resolution: d.resolution(g.res),
-      ...(g.date !== undefined ? { date: new Date(g.date) } : {}),
-      ...(g.info !== undefined ? { info: d.cborText(g.info) } : {}),
-    };
-    return g.passphrase !== undefined
-      ? { type: "passphrase", passphrase: g.passphrase, ...common }
-      : { type: "seed", seed: unhex(g.seed ?? ""), ...common };
-  };
-  const privOpt = (o: PrivOpt | undefined): any =>
-    o === undefined || o === "omit"
-      ? m.XIDPrivateKeyOptions.Omit
-      : o === "include"
-        ? m.XIDPrivateKeyOptions.Include
-        : o === "elide"
-          ? m.XIDPrivateKeyOptions.Elide
-          : { type: m.XIDPrivateKeyOptions.Encrypt, password: utf8(o.encrypt), ...d.kdf(o.method) };
-  const genOpt = (o: GenOpt | undefined): any =>
-    o === undefined || o === "omit"
-      ? m.XIDGeneratorOptions.Omit
-      : o === "include"
-        ? m.XIDGeneratorOptions.Include
-        : o === "elide"
-          ? m.XIDGeneratorOptions.Elide
-          : { type: m.XIDGeneratorOptions.Encrypt, password: utf8(o.encrypt), ...d.kdf(o.method) };
-  const signOpt = (o: SignOpt | undefined): any =>
-    o === undefined || o === "none"
-      ? { type: "none" }
-      : o === "inception"
-        ? { type: "inception" }
-        : { type: "privateKeys", privateKeys: priv(pkb(o.seed), "schnorr") };
-  const password = (out: OutputSpec): Uint8Array | undefined => {
-    const p = out.priv;
-    const g = out.gen;
-    const pw = typeof p === "object" ? p.encrypt : typeof g === "object" ? g.encrypt : undefined;
-    return pw === undefined ? undefined : utf8(pw);
-  };
-  const makeKey = (k: KeySpec): any => {
-    const p = pkb(k.seed);
-    const key = k.private
-      ? m.Key.newWithPrivateKeys(priv(p, k.scheme), pub(p, k.scheme))
-      : m.Key.new(pub(p, k.scheme));
-    if (k.nickname !== undefined) key.setNickname(k.nickname);
-    for (const e of k.endpoints ?? []) key.addEndpoint(e);
-    permissions(key, k.allow, k.deny);
-    return key;
-  };
-  const xidOf = (seed: string): any =>
-    m.XIDDocument.new(
-      { type: "publicKeys", publicKeys: pub(pkb(seed), undefined) },
-      { type: "none" },
-    ).xid();
-  const build = (spec: DocSpec): { doc: any; delegates: any[] } => {
-    const p = pkb(spec.inception.seed);
-    const scheme = spec.inception.scheme;
-    let doc: any;
-    switch (spec.inception.kind) {
-      case "publicKeys":
-        doc = m.XIDDocument.new(
-          { type: "publicKeys", publicKeys: pub(p, scheme) },
-          genesis(spec.genesis),
-        );
-        break;
-      case "privateKeyBase":
-        doc = m.XIDDocument.new(
-          { type: "privateKeyBase", privateKeyBase: p },
-          genesis(spec.genesis),
-        );
-        break;
-      case "privateKeys":
-        doc = m.XIDDocument.new(
-          { type: "privateKeys", privateKeys: priv(p, scheme), publicKeys: pub(p, scheme) },
-          genesis(spec.genesis),
-        );
-        break;
-      case "xid":
-        doc = m.XIDDocument.fromXid(xidOf(spec.inception.seed));
-        break;
-    }
-    for (const r of spec.resolution ?? []) doc.addResolutionMethod(r);
-    for (const k of spec.keys ?? []) doc.addKey(makeKey(k));
-    const delegates: any[] = [];
-    for (const ds of spec.delegates ?? []) {
-      const controller =
-        ds.doc !== undefined ? build(ds.doc).doc : m.XIDDocument.fromXid(xidOf(ds.xidSeed ?? ""));
-      const delegate = m.Delegate.new(controller);
-      permissions(delegate, ds.allow, ds.deny);
-      doc.addDelegate(delegate);
-      delegates.push(delegate);
-    }
-    for (const s of spec.services ?? []) doc.addService(makeService(spec, s, delegates));
-    for (const a of spec.attachments ?? []) doc.addAttachment(a.payload, a.vendor, a.conformsTo);
-    for (const e of spec.edges ?? []) doc.addEdge(d.edgeEnvelope(e));
-    if (spec.custom?.length) {
-      let env = doc.toEnvelope(m.XIDPrivateKeyOptions.Omit, m.XIDGeneratorOptions.Omit, {
-        type: "none",
-      });
-      for (const [k, v] of spec.custom) env = env.addAssertion(k, v);
-      doc = m.XIDDocument.tryFromEnvelope(env);
-    }
-    return { doc, delegates };
-  };
-  const makeService = (spec: DocSpec, s: ServiceSpec, delegates: any[]): any => {
-    const service = m.Service.new(s.uri);
-    if (s.capability !== undefined) service.addCapability(s.capability);
-    if (s.name !== undefined) service.setName(s.name);
-    for (const i of s.keys ?? []) {
-      const seed = i < 0 ? spec.inception.seed : (spec.keys?.[i]?.seed ?? spec.inception.seed);
-      const scheme =
-        i < 0
-          ? spec.inception.kind === "privateKeyBase"
-            ? "schnorr"
-            : spec.inception.scheme
-          : spec.keys?.[i]?.scheme;
-      service.addKeyReference(pub(pkb(seed), scheme).reference());
-    }
-    for (const i of s.delegates ?? []) service.addDelegateReference(delegates[i].reference());
-    permissions(service, s.allow, s.deny);
-    return service;
-  };
-  const verifyOf = (o: SignOpt | undefined): any =>
-    o === undefined || o === "none" ? m.XIDVerifySignature.None : m.XIDVerifySignature.Inception;
-  const sortedUris = (set: Iterable<any>): string =>
-    [...set]
-      .map((u) => u.toString())
-      .sort()
-      .join(",");
-  const omitEnvelope = (doc: any): any =>
-    doc.toEnvelope(m.XIDPrivateKeyOptions.Omit, m.XIDGeneratorOptions.Omit, { type: "none" });
-  const outputsFor = (doc: any, out: OutputSpec): DocOutputs => {
-    const env = doc.toEnvelope(privOpt(out.priv), genOpt(out.gen), signOpt(out.sign));
-    const deterministic =
-      (out.priv ?? "omit") === "omit" &&
-      (out.gen ?? "omit") === "omit" &&
-      (out.sign ?? "none") === "none";
-    const pw = password(out);
-    const inception = doc.inceptionKey();
-    const prov = doc.provenance();
-    const gen = doc.provenanceGenerator();
-    return {
-      format: d.format(env),
-      cbor: deterministic ? d.cborHex(env) : "",
-      ur: deterministic ? d.urString(env) : "",
-      digest: deterministic ? d.digestHex(env) : "",
-      xid: d.xidHex(doc.xid()),
-      reference: d.referenceHex(doc.reference()),
-      isEmpty: String(doc.isEmpty()),
-      keys: String(doc.keys().length),
-      inception:
-        inception === undefined
-          ? "-"
-          : `${d.referenceHex(inception.reference())}${inception.hasPrivateKeys() ? " private" : ""}`,
-      resolution: sortedUris(doc.resolutionMethods()),
-      services: doc
-        .services()
-        .map((s: any) => s.uriString())
-        .sort()
-        .join(","),
-      delegates: doc
-        .delegates()
-        .map((x: any) => d.xidHex(x.xid()).slice(0, 8))
-        .sort()
-        .join(","),
-      attachments: String(doc.getAttachments().len()),
-      edges: String(doc.edges().len()),
-      provenance: prov === undefined ? "-" : d.markUR(prov),
-      generator: gen === undefined ? "-" : `nextSeq=${d.generatorNextSeq(gen)}`,
-      roundtrip: attempt(api, () =>
-        String(m.XIDDocument.fromEnvelope(env, pw, verifyOf(out.sign)).equals(doc)),
-      ),
-      verify: attempt(api, () => {
-        m.XIDDocument.fromEnvelope(env, pw, m.XIDVerifySignature.Inception);
-      }),
-    };
-  };
-  const api: VectorApi = {
-    doc: (spec, out) => outputsFor(build(spec).doc, out),
-    decode: (ur, verify, pw) => {
-      const env = d.envelopeFromUR(ur);
-      const doc = m.XIDDocument.fromEnvelope(
-        env,
-        pw === undefined ? undefined : utf8(pw),
-        verify === "none" ? m.XIDVerifySignature.None : m.XIDVerifySignature.Inception,
-      );
-      return d.format(omitEnvelope(doc));
-    },
-    mutate: (spec, ops) => {
-      const built = build(spec);
-      let doc = built.doc;
-      const inceptionScheme =
-        spec.inception.kind === "privateKeyBase" ? "schnorr" : spec.inception.scheme;
-      const keyPub = (i: number): any =>
-        i < 0
-          ? pub(pkb(spec.inception.seed), inceptionScheme)
-          : pub(pkb(spec.keys?.[i]?.seed ?? spec.inception.seed), spec.keys?.[i]?.scheme);
-      const lines: string[] = [];
-      for (const op of ops) {
-        const line = attempt(api, () => {
-          switch (op[0]) {
-            case "removeKey":
-              doc.removeKey(keyPub(op[1]));
-              return;
-            case "takeKey": {
-              const k = doc.takeKey(keyPub(op[1]));
-              return k === undefined ? "undefined" : d.referenceHex(k.reference());
-            }
-            case "removeInceptionKey": {
-              const k = doc.removeInceptionKey();
-              return k === undefined ? "undefined" : d.referenceHex(k.reference());
-            }
-            case "setNameForKey":
-              doc.setNameForKey(keyPub(op[1]), op[2]);
-              return;
-            case "addKey":
-              doc.addKey(makeKey(op[1]));
-              return;
-            case "addResolution":
-              doc.addResolutionMethod(op[1]);
-              return;
-            case "removeResolution":
-              return String(doc.removeResolutionMethod(op[1]));
-            case "addService":
-              doc.addService(makeService(spec, op[1], built.delegates));
-              return;
-            case "removeService":
-              doc.removeService(op[1]);
-              return;
-            case "takeService": {
-              const s = doc.takeService(op[1]);
-              return s === undefined ? "undefined" : s.uriString();
-            }
-            case "removeDelegate":
-              doc.removeDelegate(built.delegates[op[1]].xid());
-              return;
-            case "takeDelegate": {
-              const x = doc.takeDelegate(built.delegates[op[1]].xid());
-              return x === undefined ? "undefined" : d.xidHex(x.xid()).slice(0, 8);
-            }
-            case "checkContainsKey":
-              doc.checkContainsKey(keyPub(op[1]));
-              return;
-            case "checkContainsDelegate":
-              doc.checkContainsDelegate(built.delegates[op[1]].xid());
-              return;
-            case "checkServices":
-              doc.checkServicesConsistency();
-              return;
-            case "clearAttachments":
-              doc.clearAttachments();
-              return;
-            case "removeAttachment": {
-              const digests = [...doc.getAttachments().iter()].map((a: any) =>
-                (Array.isArray(a) ? a[1] : a).digest(),
-              );
-              const removed = doc.removeAttachment(digests[op[1]]);
-              return removed === undefined ? "undefined" : "removed";
-            }
-            case "clearEdges":
-              doc.clearEdges();
-              return;
-            case "removeEdge": {
-              const digests = [...doc.edges().iter()].map((e: any) =>
-                (Array.isArray(e) ? e[1] : e).digest(),
-              );
-              const removed = doc.removeEdge(digests[op[1]]);
-              return removed === undefined ? "undefined" : "removed";
-            }
-            case "nextMark":
-              doc.nextProvenanceMarkWithEmbeddedGenerator(
-                op[1].password === undefined ? undefined : utf8(op[1].password),
-                new Date(op[1].date),
-                op[1].info === undefined ? undefined : d.cborText(op[1].info),
-              );
-              return;
-            case "clearProvenance":
-              doc.setProvenance(undefined);
-              return;
-            case "clone":
-              doc = doc.clone();
-              return;
-          }
-        });
-        lines.push(`${op[0]}=${line}`);
-      }
-      return `${lines.join("\n")}\n===\n${d.format(omitEnvelope(doc))}`;
-    },
-    key: (spec, privOption) => {
-      const key = makeKey(spec);
-      const env = key.intoEnvelopeOpt(privOpt(privOption));
-      const pw = typeof privOption === "object" ? utf8(privOption.encrypt) : undefined;
-      const back = m.Key.tryFromEnvelope(env, pw);
-      const deterministic = privOption === "omit";
-      return render({
-        format: d.format(env),
-        cbor: deterministic ? d.cborHex(env) : "",
-        reference: d.referenceHex(key.reference()),
-        roundtrip: String(key.equals(back)),
-        private: String(back.hasPrivateKeys()),
-        encrypted: String(back.hasEncryptedPrivateKeys()),
-        nickname: back.nickname(),
-        endpoints: sortedUris(back.endpoints()),
-      });
-    },
-    provenance: (g, gen, pw) => {
-      const res = d.resolution(g.res);
-      const generator =
-        g.passphrase !== undefined
-          ? d.generatorFromPassphrase(res, g.passphrase)
-          : d.generatorFromSeed(res, d.seed(unhex(g.seed ?? "")));
-      const mark = d.markNext(
-        generator,
-        new Date(g.date ?? "2025-01-01T00:00:00Z"),
-        g.info === undefined ? undefined : d.cborText(g.info),
-      );
-      const provenance = m.Provenance.newWithGenerator(generator, mark);
-      const env = provenance.intoEnvelopeOpt(genOpt(gen));
-      const back = m.Provenance.tryFromEnvelope(env, pw === undefined ? undefined : utf8(pw));
-      const backGen = back.generator();
-      return render({
-        format: d.format(env),
-        cbor: gen === "omit" ? d.cborHex(env) : "",
-        mark: d.markUR(mark),
-        roundtrip: String(provenance.equals(back)),
-        generator: backGen === undefined ? "-" : `nextSeq=${d.generatorNextSeq(backGen)}`,
-        encrypted: String(back.hasEncryptedGenerator()),
-      });
-    },
-    privileges: () =>
-      PRIVILEGES.map((p) => {
-        const kv = m.privilegeToKnownValue(privilege(p));
-        return `${p}=${d.kvName(kv)}(${d.kvValue(kv)}) ${d.format(m.privilegeToEnvelope(privilege(p)))}`;
-      }).join("\n"),
-    errorCode: (e) => {
-      const x: any = e;
-      if (x?.name === "XIDError" || x?.constructor?.name === "XIDError") return String(x.code);
-      return undefined;
-    },
-  };
-  return api;
-}
-
-/**
- * Redesigned surface (Phase 3): `XIDDocument.from({ inceptionKey, genesis })`,
- * getters, `toEnvelope({ privateKeys, generator, sign })`,
- * `fromEnvelope(envelope, { password, verify })`, `Key.from`, `Service.from`,
- * `Delegate.from`, `Provenance.from`, string options, PascalCase error codes
- * (reported in the baseline's UPPER_SNAKE spelling).
- */
-export function redesignedAdapterFor(m: any, d: SiblingDeps): VectorApi {
-  if (typeof m.XIDDocument?.from !== "function") return baselineAdapterFor(m, d);
-  const pkb = d.pkbFromSeed;
-  const pub = d.pub;
-  const priv = d.priv;
-  const permissions = (obj: any, allow?: PrivilegeName[], deny?: PrivilegeName[]): void => {
-    for (const p of allow ?? []) obj.allow(p);
-    for (const p of deny ?? []) obj.deny(p);
-  };
-  const genesis = (g: GenesisSpec | undefined): any =>
-    g === undefined
-      ? undefined
-      : {
-          ...(g.passphrase !== undefined
-            ? { passphrase: g.passphrase }
-            : { seed: unhex(g.seed ?? "") }),
-          resolution: d.resolution(g.res),
-          ...(g.date !== undefined ? { date: new Date(g.date) } : {}),
-          ...(g.info !== undefined ? { info: d.cborText(g.info) } : {}),
-        };
-  const opt = (o: PrivOpt | undefined): any =>
-    o === undefined
-      ? "omit"
-      : typeof o === "string"
-        ? o
-        : { encrypt: o.encrypt, ...d.kdf(o.method) };
-  const signOpt = (o: SignOpt | undefined): any =>
-    o === undefined || o === "none"
-      ? "none"
-      : o === "inception"
-        ? "inception"
-        : priv(pkb(o.seed), "schnorr");
-  const password = (out: OutputSpec): string | undefined => {
-    const p = out.priv;
-    const g = out.gen;
-    return typeof p === "object" ? p.encrypt : typeof g === "object" ? g.encrypt : undefined;
-  };
-  const makeKey = (k: KeySpec): any => {
-    const p = pkb(k.seed);
-    const key = m.Key.from(pub(p, k.scheme), k.private ? { privateKeys: priv(p, k.scheme) } : {});
-    if (k.nickname !== undefined) key.setNickname(k.nickname);
-    for (const e of k.endpoints ?? []) key.addEndpoint(e);
-    permissions(key, k.allow, k.deny);
-    return key;
-  };
-  const xidOf = (seed: string): any =>
-    m.XIDDocument.from({ inceptionKey: pub(pkb(seed), undefined) }).xid;
-  const build = (spec: DocSpec): { doc: any; delegates: any[] } => {
-    const p = pkb(spec.inception.seed);
-    const scheme = spec.inception.scheme;
-    let doc: any;
-    switch (spec.inception.kind) {
-      case "publicKeys":
-        doc = m.XIDDocument.from({ inceptionKey: pub(p, scheme), genesis: genesis(spec.genesis) });
-        break;
-      case "privateKeyBase":
-        doc = m.XIDDocument.from({ inceptionKey: p, genesis: genesis(spec.genesis) });
-        break;
-      case "privateKeys":
-        doc = m.XIDDocument.from({
-          inceptionKey: { publicKeys: pub(p, scheme), privateKeys: priv(p, scheme) },
-          genesis: genesis(spec.genesis),
-        });
-        break;
-      case "xid":
-        doc = m.XIDDocument.fromXid(xidOf(spec.inception.seed));
-        break;
-    }
-    for (const r of spec.resolution ?? []) doc.addResolutionMethod(r);
-    for (const k of spec.keys ?? []) doc.addKey(makeKey(k));
-    const delegates: any[] = [];
-    for (const ds of spec.delegates ?? []) {
-      const controller =
-        ds.doc !== undefined ? build(ds.doc).doc : m.XIDDocument.fromXid(xidOf(ds.xidSeed ?? ""));
-      const delegate = m.Delegate.from(controller);
-      permissions(delegate, ds.allow, ds.deny);
-      doc.addDelegate(delegate);
-      delegates.push(delegate);
-    }
-    for (const s of spec.services ?? []) doc.addService(makeService(spec, s, delegates));
-    for (const a of spec.attachments ?? []) doc.addAttachment(a.payload, a.vendor, a.conformsTo);
-    for (const e of spec.edges ?? []) doc.addEdge(d.edgeEnvelope(e));
-    if (spec.custom?.length) {
-      let env = doc.toEnvelope();
-      for (const [k, v] of spec.custom) env = env.addAssertion(k, v);
-      doc = m.XIDDocument.fromEnvelope(env);
-    }
-    return { doc, delegates };
-  };
-  const makeService = (spec: DocSpec, s: ServiceSpec, delegates: any[]): any => {
-    const service = m.Service.from(s.uri);
-    if (s.capability !== undefined) service.addCapability(s.capability);
-    if (s.name !== undefined) service.setName(s.name);
-    for (const i of s.keys ?? []) {
-      const seed = i < 0 ? spec.inception.seed : (spec.keys?.[i]?.seed ?? spec.inception.seed);
-      const scheme =
-        i < 0
-          ? spec.inception.kind === "privateKeyBase"
-            ? "schnorr"
-            : spec.inception.scheme
-          : spec.keys?.[i]?.scheme;
-      service.addKeyReference(pub(pkb(seed), scheme).reference());
-    }
-    for (const i of s.delegates ?? []) service.addDelegateReference(delegates[i].reference);
-    permissions(service, s.allow, s.deny);
-    return service;
-  };
-  const verifyOf = (o: SignOpt | undefined): "none" | "inception" =>
-    o === undefined || o === "none" ? "none" : "inception";
-  const sortedUris = (set: Iterable<any>): string =>
-    [...set]
-      .map((u) => u.toString())
-      .sort()
-      .join(",");
-  const outputsFor = (doc: any, out: OutputSpec): DocOutputs => {
-    const env = doc.toEnvelope({
-      privateKeys: opt(out.priv),
-      generator: opt(out.gen),
-      sign: signOpt(out.sign),
-    });
-    const deterministic =
-      (out.priv ?? "omit") === "omit" &&
-      (out.gen ?? "omit") === "omit" &&
-      (out.sign ?? "none") === "none";
-    const pw = password(out);
-    const inception = doc.inceptionKey;
-    const prov = doc.provenance;
-    const gen = doc.provenanceGenerator;
-    return {
-      format: d.format(env),
-      cbor: deterministic ? d.cborHex(env) : "",
-      ur: deterministic ? d.urString(env) : "",
-      digest: deterministic ? d.digestHex(env) : "",
-      xid: d.xidHex(doc.xid),
-      reference: d.referenceHex(doc.reference),
-      isEmpty: String(doc.isEmpty),
-      keys: String(doc.keys.length),
-      inception:
-        inception === undefined
-          ? "-"
-          : `${d.referenceHex(inception.reference)}${inception.hasPrivateKeys ? " private" : ""}`,
-      resolution: sortedUris(doc.resolutionMethods),
-      services: doc.services
-        .map((s: any) => s.uri.toString())
-        .sort()
-        .join(","),
-      delegates: doc.delegates
-        .map((x: any) => d.xidHex(x.xid).slice(0, 8))
-        .sort()
-        .join(","),
-      attachments: String(doc.attachments.len()),
-      edges: String(doc.edges().len()),
-      provenance: prov === undefined ? "-" : d.markUR(prov),
-      generator: gen === undefined ? "-" : `nextSeq=${d.generatorNextSeq(gen)}`,
-      roundtrip: attempt(api, () =>
-        String(
-          m.XIDDocument.fromEnvelope(env, { password: pw, verify: verifyOf(out.sign) }).equals(doc),
-        ),
-      ),
-      verify: attempt(api, () => {
-        m.XIDDocument.fromEnvelope(env, { password: pw, verify: "inception" });
-      }),
-    };
-  };
-  const api: VectorApi = {
-    doc: (spec, out) => outputsFor(build(spec).doc, out),
-    decode: (ur, verify, pw) => {
-      const doc = m.XIDDocument.fromEnvelope(d.envelopeFromUR(ur), { password: pw, verify });
-      return d.format(doc.toEnvelope());
-    },
-    mutate: (spec, ops) => {
-      const built = build(spec);
-      let doc = built.doc;
-      const inceptionScheme =
-        spec.inception.kind === "privateKeyBase" ? "schnorr" : spec.inception.scheme;
-      const keyPub = (i: number): any =>
-        i < 0
-          ? pub(pkb(spec.inception.seed), inceptionScheme)
-          : pub(pkb(spec.keys?.[i]?.seed ?? spec.inception.seed), spec.keys?.[i]?.scheme);
-      const lines: string[] = [];
-      for (const op of ops) {
-        const line = attempt(api, () => {
-          switch (op[0]) {
-            case "removeKey":
-              doc.removeKey(keyPub(op[1]));
-              return;
-            case "takeKey": {
-              const k = doc.takeKey(keyPub(op[1]));
-              return k === undefined ? "undefined" : d.referenceHex(k.reference);
-            }
-            case "removeInceptionKey": {
-              const k = doc.removeInceptionKey();
-              return k === undefined ? "undefined" : d.referenceHex(k.reference);
-            }
-            case "setNameForKey":
-              doc.setNameForKey(keyPub(op[1]), op[2]);
-              return;
-            case "addKey":
-              doc.addKey(makeKey(op[1]));
-              return;
-            case "addResolution":
-              doc.addResolutionMethod(op[1]);
-              return;
-            case "removeResolution":
-              return String(doc.removeResolutionMethod(op[1]));
-            case "addService":
-              doc.addService(makeService(spec, op[1], built.delegates));
-              return;
-            case "removeService":
-              doc.removeService(op[1]);
-              return;
-            case "takeService": {
-              const s = doc.takeService(op[1]);
-              return s === undefined ? "undefined" : s.uri.toString();
-            }
-            case "removeDelegate":
-              doc.removeDelegate(built.delegates[op[1]].xid);
-              return;
-            case "takeDelegate": {
-              const x = doc.takeDelegate(built.delegates[op[1]].xid);
-              return x === undefined ? "undefined" : d.xidHex(x.xid).slice(0, 8);
-            }
-            case "checkContainsKey":
-              doc.expectKey(keyPub(op[1]));
-              return;
-            case "checkContainsDelegate":
-              doc.expectDelegate(built.delegates[op[1]].xid);
-              return;
-            case "checkServices":
-              doc.expectServicesConsistent();
-              return;
-            case "clearAttachments":
-              doc.clearAttachments();
-              return;
-            case "removeAttachment": {
-              const digests = [...doc.attachments.iter()].map((a: any) => a[1].digest());
-              return doc.removeAttachment(digests[op[1]]) === undefined ? "undefined" : "removed";
-            }
-            case "clearEdges":
-              doc.clearEdges();
-              return;
-            case "removeEdge": {
-              const digests = [...doc.edges().iter()].map((e: any) => e[1].digest());
-              return doc.removeEdge(digests[op[1]]) === undefined ? "undefined" : "removed";
-            }
-            case "nextMark":
-              doc.nextProvenanceMark({
-                date: new Date(op[1].date),
-                ...(op[1].info === undefined ? {} : { info: d.cborText(op[1].info) }),
-                ...(op[1].password === undefined ? {} : { password: op[1].password }),
-              });
-              return;
-            case "clearProvenance":
-              doc.setProvenance(undefined);
-              return;
-            case "clone":
-              doc = doc.clone();
-              return;
-          }
-        });
-        lines.push(`${op[0]}=${line}`);
-      }
-      return `${lines.join("\n")}\n===\n${d.format(doc.toEnvelope())}`;
-    },
-    key: (spec, privOption) => {
-      const key = makeKey(spec);
-      const env = key.toEnvelope({ privateKeys: opt(privOption) });
-      const pw = typeof privOption === "object" ? privOption.encrypt : undefined;
-      const back = m.Key.fromEnvelope(env, { password: pw });
-      const deterministic = privOption === "omit";
-      return render({
-        format: d.format(env),
-        cbor: deterministic ? d.cborHex(env) : "",
-        reference: d.referenceHex(key.reference),
-        roundtrip: String(key.equals(back)),
-        private: String(back.hasPrivateKeys),
-        encrypted: String(back.hasEncryptedPrivateKeys),
-        nickname: back.nickname,
-        endpoints: sortedUris(back.endpoints),
-      });
-    },
-    provenance: (g, gen, pw) => {
-      const res = d.resolution(g.res);
-      const generator =
-        g.passphrase !== undefined
-          ? d.generatorFromPassphrase(res, g.passphrase)
-          : d.generatorFromSeed(res, d.seed(unhex(g.seed ?? "")));
-      const mark = d.markNext(
-        generator,
-        new Date(g.date ?? "2025-01-01T00:00:00Z"),
-        g.info === undefined ? undefined : d.cborText(g.info),
-      );
-      const provenance = m.Provenance.from(mark, { generator });
-      const env = provenance.toEnvelope({ generator: opt(gen) });
-      const back = m.Provenance.fromEnvelope(env, { password: pw });
-      const backGen = back.generator;
-      return render({
-        format: d.format(env),
-        cbor: gen === "omit" ? d.cborHex(env) : "",
-        mark: d.markUR(mark),
-        roundtrip: String(provenance.equals(back)),
-        generator: backGen === undefined ? "-" : `nextSeq=${d.generatorNextSeq(backGen)}`,
-        encrypted: String(back.hasEncryptedGenerator),
-      });
-    },
-    privileges: () =>
-      PRIVILEGES.map((p) => {
-        const kv = m.privilegeKnownValue(p);
-        return `${p}=${d.kvName(kv)}(${d.kvValue(kv)}) ${d.format(m.privilegeEnvelope(p))}`;
-      }).join("\n"),
-    errorCode: (e) => {
-      const x: any = e;
-      if (x?.name === "XIDError" || x?.constructor?.name === "XIDError")
-        return String(x.code)
-          .replace(/([a-z])([A-Z])/g, "$1_$2")
-          .toUpperCase();
-      return undefined;
-    },
-  };
-  return api;
+  /** Hand-assembled envelopes. */
+  knownValueEnvelope(value: number): any;
+  uri(s: string): any;
+  bytesValue(bytes: Uint8Array): any;
+  salt(bytes: Uint8Array): any;
+  assertionEnvelope(predicate: any, object: any): any;
+  addAssertionEnvelope(envelope: any, assertion: any): any;
+  wrap(envelope: any): any;
+  elide(envelope: any): any;
+  sign(envelope: any, privateKeys: any): any;
+  generatorEnvelope(generator: any): any;
+  /** The UR string parsed into a UR value (the grammar step). */
+  parseUR(s: string): any;
 }

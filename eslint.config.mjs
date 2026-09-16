@@ -5,8 +5,6 @@ import { resolve } from "node:path";
 
 /*
  * Strict, type-checked ESLint flat config for the @blockchaincommons/xid library.
- * (Migrated from the @bcts/eslint shared config, inlined here so the package
- * is self-contained.)
  */
 const project = resolve(process.cwd(), "./tsconfig.json");
 

@@ -24,9 +24,7 @@ describe("Delegate", () => {
 
     // Round-trip through envelope
     const envelope = bobUnresolvedDelegate.toEnvelope();
-    const bobUnresolvedDelegate2 = Delegate.fromEnvelope(envelope, (e) =>
-      XIDDocument.fromEnvelope(e),
-    );
+    const bobUnresolvedDelegate2 = Delegate.fromEnvelope(envelope);
     expect(bobUnresolvedDelegate.equals(bobUnresolvedDelegate2)).toBe(true);
 
     // Create a full delegate with full document
@@ -36,7 +34,9 @@ describe("Delegate", () => {
 
     // Round-trip through envelope
     const envelope2 = bobDelegate.toEnvelope();
-    const bobDelegate2 = Delegate.fromEnvelope(envelope2, (e) => XIDDocument.fromEnvelope(e));
+    const bobDelegate2 = Delegate.fromEnvelope(envelope2, {
+      parseDocument: (e) => XIDDocument.fromEnvelope(e),
+    });
     expect(bobDelegate.equals(bobDelegate2)).toBe(true);
 
     // Add Bob as delegate to Alice's document

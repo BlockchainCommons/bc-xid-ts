@@ -1,5 +1,5 @@
 /**
- * Baseline bundle entry: the PUBLISHED pre-redesign packages (`@bcts/*`
+ * Baseline bundle entry: the PUBLISHED `@bcts` packages (`@bcts/*`
  * 1.0.0-beta.6, one copy of each, installed under this directory from
  * `package.json`) plus the sibling values the differential needs to drive
  * them (seeded keys, envelopes, CBOR values).
