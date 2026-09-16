@@ -4,7 +4,7 @@
 
 **`bc-xid-ts`** implements eXtensible IDentifiers: stable, self-certifying decentralized identifiers whose keys, delegates, and permissions can evolve over time.
 
-XIDs (eXtensible IDentity, _/zid/_) are unique 32-byte identifiers that represent any entities—real or abstract—such as a person, organization, or device. Generated from the SHA-256 hash of a specific public signing key known as the inception key, a XID provides a stable identity throughout its lifecycle, even as associated keys and permissions evolve. Leveraging Gordian Envelope for XID Documents, XIDs are recursively resolvable and extensible, allowing for detailed assertions about the entity, including key declarations, permissions, controllers, and endpoints. The integration of [provenance marks](https://provemark.com) ensures a verifiable chain of document revisions, enhancing security and authenticity in decentralized identity management.
+XIDs (eXtensible IDentity, _/zid/_) are unique 32-byte identifiers that represent any entities-real or abstract-such as a person, organization, or device. Generated from the SHA-256 hash of a specific public signing key known as the inception key, a XID provides a stable identity throughout its lifecycle, even as associated keys and permissions evolve. Leveraging Gordian Envelope for XID Documents, XIDs are recursively resolvable and extensible, allowing for detailed assertions about the entity, including key declarations, permissions, controllers, and endpoints. The integration of [provenance marks](https://provemark.com) ensures a verifiable chain of document revisions, enhancing security and authenticity in decentralized identity management.
 
 ## Installation Instructions
 
@@ -19,8 +19,6 @@ yarn add @blockchaincommons/xid
 # or
 bun add @blockchaincommons/xid
 ```
-
-**Requirements:** TypeScript >= 5.7 is required to consume the published types. Node >= 22.12 is required.
 
 ## Usage Instructions
 
@@ -47,25 +45,6 @@ back.equals(doc); // true
 doc.toUR().toString(); // "ur:xid/…"
 ```
 
-Every failure is an `XIDError`: `code` names the condition with the
-reference's variant names (`Duplicate`, `NotFound`, `EnvelopeParsing`, …),
-`details` is typed by the code, and a sibling error wrapped inside a
-decoder is `cause`. A caller's own faulty input (a `null` where private
-keys go, an unknown option string, an invalid date) is a `TypeError`; a
-constructor given text that is not a URI raises the components error.
-
-Reads are getters. Containers copy out (`keys`, `delegates`, `services`,
-`resolutionMethods`, `endpoints`, `permissions.allow`); the values in them
-are live, so `doc.keys[0].setNickname("x")` changes the document, and
-`attachments` and `edges()` are the document's own containers. Options are
-strings or small objects (`toEnvelope({ privateKeys: "include", sign:
-"inception" })`).
-
-On the wire, a service's permissions are allow-only: `'deny'` assertions
-are written but not read back, as the reference does (see ADR 0007 in
-`docs/adr`).
-
-
 Runnable examples live in the [`examples/`](https://github.com/BlockchainCommons/bc-xid-ts/tree/master/examples) directory.
 
 ## Status - Beta
@@ -74,7 +53,7 @@ Runnable examples live in the [`examples/`](https://github.com/BlockchainCommons
 
 ### Version History
 
-- **1.0.0-beta.2 (September 16, 2026)** - Every decode failure is an `XIDError` with the reference's codes and messages; strict CBOR decoders (`fromCbor`, `fromUntaggedCbor`); typed error details; `addNickname`; options objects throughout; the JavaScript input domain checked; the Rust harness compares messages on every parser path.
+- **1.0.0-beta.2 (September 16, 2026)** - Every decode failure is an `XIDError` with the reference's codes and messages; strict CBOR decoders (`fromCbor`, `fromUntaggedCbor`); typed error details; `addNickname`; options objects throughout; the JavaScript input domain checked.
 - **1.0.0-beta.1 (September 9, 2026)** - Initial beta implementation.
 
 ### Roadmap
@@ -89,7 +68,7 @@ Runnable examples live in the [`examples/`](https://github.com/BlockchainCommons
 To build and work on this library, you'll need the following tools:
 
 - [Node.js](https://nodejs.org/) >= 22.12 - JavaScript runtime.
-- [Bun](https://bun.sh/) - used in CI to install dependencies and run scripts (any Node-compatible package manager also works).
+- [Bun](https://bun.sh/) - used to install dependencies and run scripts (any node package manager works).
 - [TypeScript](https://www.typescriptlang.org/) >= 5.7 - language and type checker.
 
 ### Derived from ...
@@ -97,7 +76,7 @@ To build and work on this library, you'll need the following tools:
 This `bc-xid-ts` project is either derived from or was inspired by:
 
 - [BlockchainCommons/bc-xid-rust](https://github.com/BlockchainCommons/bc-xid-rust) - The reference Rust implementation, by [Wolf McNally](https://github.com/wolfmcnally).
-- [paritytech/bcts](https://github.com/paritytech/bcts) - A TypeScript port covering many Blockchain Commons' implementations, by [Parity Technologies](https://github.com/paritytech).
+- [paritytech/bcts](https://github.com/paritytech/bcts) - A TypeScript port of many Blockchain Commons' specs, by [Parity Technologies](https://github.com/paritytech).
 
 ## Financial Support
 
