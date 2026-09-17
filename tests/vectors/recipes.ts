@@ -80,6 +80,11 @@ export interface DelegateSpec {
   xidSeed?: string;
   allow?: PrivilegeName[];
   deny?: PrivilegeName[];
+  /**
+   * Resolution methods added to the source document after the delegate
+   * is built from it; the delegate's own copy does not see them.
+   */
+  laterResolution?: string[];
 }
 export interface AttachmentSpec {
   payload: string;
@@ -150,6 +155,20 @@ export type Op =
   | ["clearEdges"]
   | ["removeEdge", number]
   | ["nextMark", { date: string; info?: string; password?: string }]
+  /**
+   * The provided-generator form: a generator built from the document's
+   * genesis (or the given one), kept across the script and advanced in
+   * place; `fresh` uses a new one at the genesis mark instead.
+   */
+  | ["nextMarkProvided", { date: string; info?: string; genesis?: GenesisSpec; fresh?: boolean }]
+  /** Keeps the mark, drops the generator (`setProvenance(mark)`). */
+  | ["dropGenerator"]
+  /** `removeEndpoint` on the key at this index (-1 the inception key). */
+  | ["removeEndpoint", number, string]
+  /** `removeKeyReference` on the service at this URI, of the key at this index. */
+  | ["removeKeyReference", string, number]
+  /** `removeDelegateReference` on the service at this URI, of the delegate at this index. */
+  | ["removeDelegateReference", string, number]
   | ["clearProvenance"]
   | ["clone"];
 
@@ -224,7 +243,8 @@ export type Recipe =
   | { k: "decode"; ur: string; verify: Verify; password?: string }
   | { k: "mutate"; doc: DocSpec; ops: Op[] }
   | { k: "key"; key: KeySpec; priv: PrivOpt }
-  | { k: "provenance"; genesis: GenesisSpec; gen: GenOpt; password?: string }
+  /** With `take`, the generator is taken from the parsed value and what came out is reported. */
+  | { k: "provenance"; genesis: GenesisSpec; gen: GenOpt; password?: string; take?: boolean }
   | { k: "privileges" }
   /**
    * A document envelope assembled by hand and parsed: the `base`
@@ -253,11 +273,7 @@ export type Recipe =
   /** `addNickname`/`setNickname` in sequence on a fresh key. */
   | { k: "nickname"; ops: ["add" | "set", string][] }
   /** A caller's input to a constructor, outside any decoder. */
-  | {
-      k: "construct";
-      op: "service" | "resolution" | "endpoint" | "keyRefHex" | "delegateRefHex";
-      v: string;
-    }
+  | { k: "construct"; op: "service" | "resolution" | "endpoint"; v: string }
   /** The JavaScript input domain; the reference has no analogue (`js-only`). */
   | { k: "domain"; case: string; cls: DomainClass };
 export type Outcome = string;
@@ -292,7 +308,12 @@ export interface VectorApi {
   decode(ur: string, verify: Verify, password: string | undefined): string;
   mutate(spec: DocSpec, ops: Op[]): string;
   key(spec: KeySpec, priv: PrivOpt): string;
-  provenance(genesis: GenesisSpec, gen: GenOpt, password: string | undefined): string;
+  provenance(
+    genesis: GenesisSpec,
+    gen: GenOpt,
+    password: string | undefined,
+    take: boolean,
+  ): string;
   privileges(): string;
   docEnvelope(r: Extract<Recipe, { k: "docEnvelope" }>): string;
   keyEnvelope(r: Extract<Recipe, { k: "keyEnvelope" }>): string;
@@ -328,6 +349,7 @@ export const docName = (d: DocSpec): string =>
   (d.resolution?.length ? ` res×${d.resolution.length}` : "") +
   (d.keys?.length ? ` keys×${d.keys.length}` : "") +
   (d.delegates?.length ? ` delegates×${d.delegates.length}` : "") +
+  (d.delegates?.some((x) => x.laterResolution?.length) ? " later" : "") +
   (d.services?.length ? ` services×${d.services.length}` : "") +
   (d.attachments?.length ? ` attachments×${d.attachments.length}` : "") +
   (d.edges?.length ? ` edges×${d.edges.length}` : "") +
@@ -386,11 +408,11 @@ export function recipeName(r: Recipe): string {
     case "decode":
       return `decode ${r.verify}${r.password !== undefined ? " pw" : ""} ${r.ur.slice(0, 40)}`;
     case "mutate":
-      return `mutate ${docName(r.doc)}: ${r.ops.map((o) => o[0]).join(",")}`;
+      return `mutate ${docName(r.doc)}: ${r.ops.map((o) => (o[0] === "nextMarkProvided" && o[1].fresh === true ? "nextMarkProvided(fresh)" : o[0])).join(",")}`;
     case "key":
       return `key ${r.key.seed.slice(0, 8)}${r.key.scheme ? `/${r.key.scheme}` : ""}${r.key.private ? " private" : ""} [${optName(r.priv)}]`;
     case "provenance":
-      return `provenance ${r.genesis.res ?? "high"} ${r.genesis.passphrase !== undefined ? `"${r.genesis.passphrase}"` : r.genesis.seed?.slice(0, 8)} [${optName(r.gen)}]${r.password !== undefined ? " pw" : ""}`;
+      return `provenance ${r.genesis.res ?? "high"} ${r.genesis.passphrase !== undefined ? `"${r.genesis.passphrase}"` : r.genesis.seed?.slice(0, 8)} [${optName(r.gen)}]${r.password !== undefined ? " pw" : ""}${r.take === true ? " take" : ""}`;
     case "privileges":
       return "privileges";
     case "docEnvelope":
@@ -432,18 +454,7 @@ const assertionUsesSalt = (a: AssertionSpec): boolean =>
  * The frozen bundle cannot decode raw CBOR bytes, exports no `Salt` and has
  * no JavaScript-domain guards to compare.
  */
-export const isBaselineSupported = (r: Recipe): boolean => {
-  if (r.k === "cbor" || r.k === "domain") return false;
-  if (r.k === "docEnvelope")
-    return !(
-      (r.subject !== undefined && objUsesSalt(r.subject)) ||
-      (r.assertions ?? []).some(assertionUsesSalt) ||
-      (r.outer ?? []).some(assertionUsesSalt)
-    );
-  if (r.k === "keyEnvelope" || r.k === "serviceEnvelope" || r.k === "provenanceEnvelope")
-    return !(objUsesSalt(r.subject) || (r.assertions ?? []).some(assertionUsesSalt));
-  return true;
-};
+export const isBaselineSupported = (r: Recipe): boolean => r.k !== "domain";
 
 export const render = (o: Record<string, string>): string =>
   Object.keys(o)
@@ -465,7 +476,7 @@ export function materialize(api: VectorApi, r: Recipe): Outcome {
       case "key":
         return api.key(r.key, r.priv);
       case "provenance":
-        return api.provenance(r.genesis, r.gen, r.password);
+        return api.provenance(r.genesis, r.gen, r.password, r.take === true);
       case "privileges":
         return api.privileges();
       case "docEnvelope":
@@ -543,4 +554,6 @@ export interface SiblingDeps {
   generatorEnvelope(generator: any): any;
   /** The UR string parsed into a UR value (the grammar step). */
   parseUR(s: string): any;
+  /** A `CborDate` from its string. */
+  cborDate?(s: string): any;
 }

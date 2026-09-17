@@ -90,7 +90,7 @@ export interface XIDErrorDetailsByCode {
   /** The field must not be empty. */
   EmptyValue: {
     /** The field's name. */
-    readonly item: string;
+    readonly field: string;
   };
   /** A known value that names no privilege. */
   UnknownPrivilege: unknown;
@@ -133,12 +133,12 @@ export interface XIDErrorDetailsByCode {
     /** The service's URI. */
     readonly uri: string;
   };
-  /** `expectKey` found no such key. */
+  /** `checkContainsKey` found no such key. */
   KeyNotFoundInDocument: {
     /** The key's public keys, rendered. */
     readonly key: string;
   };
-  /** `expectDelegate` found no such delegate. */
+  /** `checkContainsDelegate` found no such delegate. */
   DelegateNotFoundInDocument: {
     /** The delegate's XID, rendered. */
     readonly delegate: string;
@@ -216,10 +216,10 @@ export type XIDErrorTyped<C extends XIDErrorCode = XIDErrorCode> = C extends XID
     }
   : never;
 
-/** `details` of the four item codes. */
-export type ItemDetails = XIDErrorDetailsFor<
-  "Duplicate" | "NotFound" | "StillReferenced" | "EmptyValue"
->;
+/** `details` of the three item codes. */
+export type ItemDetails = XIDErrorDetailsFor<"Duplicate" | "NotFound" | "StillReferenced">;
+/** `details` of `EmptyValue`. */
+export type EmptyValueDetails = XIDErrorDetailsFor<"EmptyValue">;
 /** `details` of the codes with nothing more to say. */
 export type PlainDetails = XIDErrorDetailsFor<
   | "UnknownPrivilege"
@@ -333,7 +333,7 @@ export class XIDError extends Error {
 
   /** `EmptyValue`: the field must not be empty. */
   static emptyValue(field: string): XIDErrorTyped<"EmptyValue"> {
-    return XIDError.make(`invalid or empty value: ${field}`, { code: "EmptyValue", item: field });
+    return XIDError.make(`invalid or empty value: ${field}`, { code: "EmptyValue", field });
   }
 
   // Structure -----------------------------------------------------------------
@@ -412,7 +412,7 @@ export class XIDError extends Error {
     });
   }
 
-  /** `KeyNotFoundInDocument`: `expectKey` found no such key. */
+  /** `KeyNotFoundInDocument`: `checkContainsKey` found no such key. */
   static keyNotFoundInDocument(key: string): XIDErrorTyped<"KeyNotFoundInDocument"> {
     return XIDError.make(`key not found in XID document: ${key}`, {
       code: "KeyNotFoundInDocument",
@@ -420,7 +420,7 @@ export class XIDError extends Error {
     });
   }
 
-  /** `DelegateNotFoundInDocument`: `expectDelegate` found no such delegate. */
+  /** `DelegateNotFoundInDocument`: `checkContainsDelegate` found no such delegate. */
   static delegateNotFoundInDocument(delegate: string): XIDErrorTyped<"DelegateNotFoundInDocument"> {
     return XIDError.make(`delegate not found in XID document: ${delegate}`, {
       code: "DelegateNotFoundInDocument",

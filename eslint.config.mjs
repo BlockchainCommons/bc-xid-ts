@@ -34,7 +34,7 @@ export default [
       ...tsPlugin.configs["recommended-type-checked"].rules,
       ...tsPlugin.configs["stylistic-type-checked"].rules,
 
-      // Conflicts with tsconfig `isolatedDeclarations` (P1.3), which REQUIRES
+      // Conflicts with tsconfig `isolatedDeclarations`, which REQUIRES
       // explicit annotations on exported consts the rule deems inferrable.
       "@typescript-eslint/no-inferrable-types": "off",
 

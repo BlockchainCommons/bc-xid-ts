@@ -42,14 +42,26 @@ export const DOMAIN_CASES: readonly [string, "J1" | "J2" | "J3" | "J4"][] = [
   ["genesis.date.invalid", "J3"],
   ["genesis.resolution.bogus", "J3"],
   ["nextMark.date.invalid", "J3"],
-  ["nextMark.generatorAndPassword", "J4"],
   ["verify.bogus", "J3"],
   ["privateKeys.bogus", "J3"],
   ["generator.bogus", "J3"],
   ["sign.bogus", "J3"],
   ["inceptionKey.undefined", "J3"],
   ["random.genesis", "J4"],
-  ["delegate.fromEnvelope.default", "J4"],
+  ["genesis.date.cborDate", "J4"],
+  ["nextMark.date.cborDate", "J4"],
+  ["inceptionKey.plainObject", "J3"],
+  ["inceptionKey.pair.plain", "J3"],
+  ["addKey.plain", "J3"],
+  ["addService.plain", "J3"],
+  ["addDelegate.plain", "J3"],
+  ["equals.plain", "J3"],
+  ["provenance.equals.plain", "J3"],
+  ["nextMark.generator.plain", "J3"],
+  ["setProvenance.string", "J3"],
+  ["provenance.from.plain", "J3"],
+  ["setProvenanceWithGenerator.swapped", "J3"],
+  ["provenance.equals.generator", "J4"],
 ];
 
 const WRAPPING = new Set(["EnvelopeParsing", "Component", "Cbor", "ProvenanceMark"]);
@@ -58,9 +70,11 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
   const pkb = d.pkbFromSeed;
   const pub = d.pub;
   const priv = d.priv;
+  // The carriers' own adders; the frozen bundle has them on `permissions` only.
   const permissions = (obj: any, allow?: PrivilegeName[], deny?: PrivilegeName[]): void => {
-    for (const p of allow ?? []) obj.allow(p);
-    for (const p of deny ?? []) obj.deny(p);
+    const target = typeof obj.addAllow === "function" ? obj : obj.permissions;
+    for (const p of allow ?? []) target.addAllow(p);
+    for (const p of deny ?? []) target.addDeny(p);
   };
   const genesis = (g: GenesisSpec | undefined): any =>
     g === undefined
@@ -134,6 +148,7 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
       const controller =
         ds.doc !== undefined ? build(ds.doc).doc : m.XIDDocument.fromXid(xidOf(ds.xidSeed ?? ""));
       const delegate = m.Delegate.from(controller);
+      for (const r of ds.laterResolution ?? []) controller.addResolutionMethod(r);
       permissions(delegate, ds.allow, ds.deny);
       doc.addDelegate(delegate);
       delegates.push(delegate);
@@ -296,6 +311,22 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
     };
   };
   const edgesOf = (doc: any): any => (typeof doc.edges === "function" ? doc.edges() : doc.edges);
+  // The lookups; the frozen bundle has them under the short names.
+  const findKey = (doc: any, publicKeys: any): any =>
+    (doc.findKeyByPublicKeys ?? doc.key).call(doc, publicKeys);
+  const findService = (doc: any, uri: string): any =>
+    (doc.findServiceByUri ?? doc.service).call(doc, uri);
+  // The two next-mark forms; the frozen bundle has one method with a `generator` option.
+  const nextMark = (doc: any, options: any): void => {
+    if (typeof doc.nextProvenanceMarkWithEmbeddedGenerator === "function")
+      doc.nextProvenanceMarkWithEmbeddedGenerator(options);
+    else doc.nextProvenanceMark(options);
+  };
+  const nextMarkProvided = (doc: any, generator: any, options: any): void => {
+    if (typeof doc.nextProvenanceMarkWithProvidedGenerator === "function")
+      doc.nextProvenanceMarkWithProvidedGenerator(generator, options);
+    else doc.nextProvenanceMark({ ...options, generator });
+  };
   const docFormat = (doc: any): string => d.format(doc.toEnvelope());
   const keyOutputs = (key: any): Record<string, string> => ({
     format: d.format(key.toEnvelope({ privateKeys: "include" })),
@@ -337,20 +368,7 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
       case "nextMark.date.invalid": {
         const doc = m.XIDDocument.from({ inceptionKey: alice, genesis: wolf });
         return attempt(api, () => {
-          doc.nextProvenanceMark({ date: new Date(NaN) });
-        });
-      }
-      case "nextMark.generatorAndPassword": {
-        const doc = m.XIDDocument.from({ inceptionKey: alice, genesis: wolf });
-        const generator = doc.provenanceGenerator;
-        doc.setProvenance(doc.provenance);
-        return attempt(api, () => {
-          doc.nextProvenanceMark({
-            generator,
-            password: "ignored",
-            date: new Date("2025-01-02T00:00:00Z"),
-          });
-          return `seq=${doc.provenance.seq}`;
+          nextMark(doc, { date: new Date(NaN) });
         });
       }
       case "verify.bogus": {
@@ -379,15 +397,71 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
           generator: doc.provenanceGenerator === undefined ? "-" : "held",
         });
       }
-      case "delegate.fromEnvelope.default": {
-        const controller = m.XIDDocument.from({ inceptionKey: alice.schnorrPublicKeys() });
-        const delegate = m.Delegate.from(controller, {
-          permissions: m.Permissions.from({ allow: ["Sign"] }),
+      case "genesis.date.cborDate":
+        return docWith({
+          inceptionKey: alice,
+          genesis: { ...wolf, date: d.cborDate?.("2025-01-01T00:00:00Z") },
         });
-        const back = m.Delegate.fromEnvelope(delegate.toEnvelope());
+      case "nextMark.date.cborDate": {
+        const doc = m.XIDDocument.from({ inceptionKey: alice, genesis: wolf });
+        return attempt(api, () => {
+          nextMark(doc, { date: d.cborDate?.("2025-01-02T00:00:00Z") });
+          return `seq=${doc.provenance.seq}`;
+        });
+      }
+      case "inceptionKey.plainObject":
+        return docWith({ inceptionKey: { foo: 1 } });
+      case "inceptionKey.pair.plain":
+        return docWith({ inceptionKey: { publicKeys: {}, privateKeys: {} } });
+      case "addKey.plain":
+      case "addService.plain":
+      case "addDelegate.plain": {
+        const doc = m.XIDDocument.from({ inceptionKey: alice });
+        return attempt(api, () => {
+          if (name === "addKey.plain") doc.addKey({});
+          else if (name === "addService.plain") doc.addService({});
+          else doc.addDelegate({});
+        });
+      }
+      case "equals.plain":
+        return attempt(api, () => String(m.XIDDocument.from({ inceptionKey: alice }).equals({})));
+      case "provenance.equals.plain": {
+        const doc = m.XIDDocument.from({ inceptionKey: alice, genesis: wolf });
+        const provenance = m.Provenance.from(doc.provenance);
+        return attempt(api, () => String(provenance.equals({})));
+      }
+      case "nextMark.generator.plain": {
+        const doc = m.XIDDocument.from({ inceptionKey: alice, genesis: wolf });
+        doc.setProvenance(doc.provenance);
+        return attempt(api, () => {
+          nextMarkProvided(doc, {}, { date: new Date("2025-01-02T00:00:00Z") });
+        });
+      }
+      case "setProvenance.string": {
+        const doc = m.XIDDocument.from({ inceptionKey: alice });
+        return attempt(api, () => {
+          doc.setProvenance("x");
+          return typeof doc.provenance;
+        });
+      }
+      case "provenance.from.plain":
+        return attempt(api, () => typeof m.Provenance.from({}).mark);
+      case "setProvenanceWithGenerator.swapped": {
+        const doc = m.XIDDocument.from({ inceptionKey: alice, genesis: wolf });
+        return attempt(api, () => {
+          doc.setProvenanceWithGenerator(doc.provenance, doc.provenanceGenerator);
+          return typeof doc.provenance;
+        });
+      }
+      case "provenance.equals.generator": {
+        const doc = m.XIDDocument.from({ inceptionKey: alice, genesis: wolf });
+        const env = doc.toEnvelope({ generator: "include" });
+        const a = m.XIDDocument.fromEnvelope(env);
+        const b = m.XIDDocument.fromEnvelope(env);
+        nextMark(b, { date: new Date("2025-01-02T00:00:00Z") });
         return render({
-          equals: String(back.equals(delegate)),
-          format: d.format(back.toEnvelope()),
+          same: String(m.XIDDocument.fromEnvelope(env).equals(a)),
+          advanced: String(a.equals(b)),
         });
       }
       default:
@@ -409,6 +483,17 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
         i < 0
           ? pub(pkb(spec.inception.seed), inceptionScheme)
           : pub(pkb(spec.keys?.[i]?.seed ?? spec.inception.seed), spec.keys?.[i]?.scheme);
+      // The caller's generators, one per genesis, advanced in place across the script.
+      const generators = new Map<string, any>();
+      const provided = (g: GenesisSpec): any => {
+        const id = JSON.stringify(g);
+        let generator = generators.get(id);
+        if (generator === undefined) {
+          generator = genesisGenerator(g).generator;
+          generators.set(id, generator);
+        }
+        return generator;
+      };
       const lines: string[] = [];
       for (const op of ops) {
         const line = attempt(api, () => {
@@ -433,8 +518,31 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
             case "addResolution":
               doc.addResolutionMethod(op[1]);
               return;
-            case "removeResolution":
-              return String(doc.removeResolutionMethod(op[1]));
+            case "removeResolution": {
+              // The URI removed; the frozen bundle reports a boolean.
+              const removed = doc.removeResolutionMethod(op[1]);
+              return typeof removed === "boolean"
+                ? String(removed)
+                : removed === undefined
+                  ? "undefined"
+                  : removed.toString();
+            }
+            case "removeEndpoint": {
+              const key = findKey(doc, keyPub(op[1]));
+              return key === undefined ? "undefined" : String(key.removeEndpoint(op[2]));
+            }
+            case "removeKeyReference": {
+              const service = findService(doc, op[1]);
+              return service === undefined
+                ? "undefined"
+                : String(service.removeKeyReference(keyPub(op[2]).reference()));
+            }
+            case "removeDelegateReference": {
+              const service = findService(doc, op[1]);
+              return service === undefined
+                ? "undefined"
+                : String(service.removeDelegateReference(built.delegates[op[2]].reference));
+            }
             case "addService":
               doc.addService(makeService(spec, op[1], built.delegates));
               return;
@@ -453,13 +561,16 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
               return x === undefined ? "undefined" : d.xidHex(x.xid).slice(0, 8);
             }
             case "checkContainsKey":
-              doc.expectKey(keyPub(op[1]));
+              (doc.checkContainsKey ?? doc.expectKey).call(doc, keyPub(op[1]));
               return;
             case "checkContainsDelegate":
-              doc.expectDelegate(built.delegates[op[1]].xid);
+              (doc.checkContainsDelegate ?? doc.expectDelegate).call(
+                doc,
+                built.delegates[op[1]].xid,
+              );
               return;
             case "checkServices":
-              doc.expectServicesConsistent();
+              (doc.checkServicesConsistency ?? doc.expectServicesConsistent).call(doc);
               return;
             case "clearAttachments":
               doc.clearAttachments();
@@ -476,11 +587,24 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
               return doc.removeEdge(digests[op[1]]) === undefined ? "undefined" : "removed";
             }
             case "nextMark":
-              doc.nextProvenanceMark({
+              nextMark(doc, {
                 date: new Date(op[1].date),
                 ...(op[1].info === undefined ? {} : { info: d.cborText(op[1].info) }),
                 ...(op[1].password === undefined ? {} : { password: op[1].password }),
               });
+              return;
+            case "nextMarkProvided": {
+              const g = op[1].genesis ?? spec.genesis;
+              if (g === undefined) throw new Error("nextMarkProvided needs a genesis");
+              const generator = op[1].fresh === true ? genesisGenerator(g).generator : provided(g);
+              nextMarkProvided(doc, generator, {
+                date: new Date(op[1].date),
+                ...(op[1].info === undefined ? {} : { info: d.cborText(op[1].info) }),
+              });
+              return;
+            }
+            case "dropGenerator":
+              doc.setProvenance(doc.provenance);
               return;
             case "clearProvenance":
               doc.setProvenance(undefined);
@@ -511,20 +635,36 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
         endpoints: sortedUris(back.endpoints),
       });
     },
-    provenance: (g, gen, pw) => {
+    provenance: (g, gen, pw, take) => {
       const { generator, mark } = genesisGenerator(g);
       const provenance = m.Provenance.from(mark, { generator });
       const env = provenance.toEnvelope({ generator: opt(gen as GenOpt) });
       const back = m.Provenance.fromEnvelope(env, { password: pw });
       const backGen = back.generator;
-      return render({
+      const rows: Record<string, string> = {
         format: d.format(env),
         cbor: gen === "omit" ? d.cborHex(env) : "",
         mark: d.markUR(mark),
         roundtrip: String(provenance.equals(back)),
         generator: backGen === undefined ? "-" : `nextSeq=${d.generatorNextSeq(backGen)}`,
         encrypted: String(back.hasEncryptedGenerator),
-      });
+      };
+      if (take) {
+        // What `takeGenerator` hands back; the frozen bundle reports a boolean.
+        const saltBefore = back.generatorSalt;
+        const taken = back.takeGenerator();
+        const salt = (s: any): string => (s.equals(saltBefore) ? "same" : "differs");
+        rows["taken"] =
+          typeof taken === "boolean"
+            ? String(taken)
+            : taken === undefined
+              ? "-"
+              : taken.data.type === "decrypted"
+                ? `decrypted nextSeq=${d.generatorNextSeq(taken.data.generator)} salt=${salt(taken.salt)}`
+                : `encrypted salt=${salt(taken.salt)}`;
+        rows["afterTake"] = `${back.hasGenerator},${back.hasEncryptedGenerator}`;
+      }
+      return render(rows);
     },
     privileges: () =>
       PRIVILEGES.map((p) => {
@@ -621,16 +761,6 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
         case "endpoint":
           doc.inceptionKey.addEndpoint(v);
           return sortedUris(doc.inceptionKey.endpoints);
-        case "keyRefHex": {
-          const s = m.Service.from("https://svc.example");
-          s.addKeyReferenceHex(v);
-          return String(s.keyReferences.size);
-        }
-        case "delegateRefHex": {
-          const s = m.Service.from("https://svc.example");
-          s.addDelegateReferenceHex(v);
-          return String(s.delegateReferences.size);
-        }
       }
     },
     domain,
@@ -641,7 +771,13 @@ export function workingTreeAdapterFor(m: any, d: SiblingDeps): VectorApi {
         WRAPPING.has(code) && typeof x.cause?.code === "string" ? `[${x.cause.code}]` : "";
       return `${code}${inner}`;
     },
-    errorMessage: (e) => (e instanceof Error ? e.message : String(e)),
+    // Engine errors word their messages per engine; report the name.
+    errorMessage: (e) =>
+      (e instanceof TypeError || e instanceof RangeError) && !("code" in e)
+        ? e.name
+        : e instanceof Error
+          ? e.message
+          : String(e),
   };
   return api;
 }

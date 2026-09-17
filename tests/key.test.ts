@@ -36,11 +36,15 @@ describe("Key", () => {
       const key = Key.from(publicKeys);
       key.addEndpoint(resolver1);
       key.addEndpoint(resolver2);
-      key.allow("All");
+      key.addAllow("All");
       key.setNickname("Alice's key");
 
       expect(hasUri(key.endpoints, resolver1)).toBe(true);
       expect(hasUri(key.endpoints, resolver2)).toBe(true);
+      expect(key.removeEndpoint("https://absent.example")).toBe(false);
+      key.addEndpoint("https://gone.example");
+      expect(key.removeEndpoint("https://gone.example")).toBe(true);
+      expect(hasUri(key.endpoints, "https://gone.example")).toBe(false);
       expect(key.nickname).toBe("Alice's key");
       expect(key.permissions.allow.has("All")).toBe(true);
 
@@ -96,10 +100,6 @@ describe("Key", () => {
       const key2 = Key.fromEnvelope(envelopeEliding);
       expect(key2.hasPrivateKeys).toBe(false);
       expect(keyOmittingPrivate.equals(key2)).toBe(true);
-
-      // Skip isEquivalentTo check - API not available
-      // const envelopeIncluding = keyIncludingPrivate.toEnvelope({ privateKeys: "include" });
-      // expect(envelopeEliding.isEquivalentTo(envelopeIncluding)).toBe(true);
     });
   });
 
@@ -150,19 +150,6 @@ describe("Key", () => {
       const envelopeElide = key.toEnvelope({ privateKeys: "elide" });
       const keyElide = Key.fromEnvelope(envelopeElide);
       expect(keyElide.privateKeys).toBeUndefined();
-      // Skip isEquivalentTo - API not available
-      // expect(envelopeElide.isEquivalentTo(envelopeInclude)).toBe(true);
-
-      // Skip Mode 4: Encrypt - API not compatible
-      // const password = new TextEncoder().encode("secure_password");
-      // const envelopeEncrypt = key.toEnvelope({ privateKeys: {
-      //   type: XIDPrivateKeyOptions.Encrypt,
-      //   password,
-      // } });
-      // const keyNoPassword = Key.fromEnvelope(envelopeEncrypt);
-      // expect(keyNoPassword.privateKeys).toBeUndefined();
-      // const keyWithPassword = Key.fromEnvelope(envelopeEncrypt, { password: password });
-      // expect(keyWithPassword.equals(key)).toBe(true);
     });
   });
 
@@ -196,7 +183,7 @@ describe("Key", () => {
       const key = Key.fromPrivateKeyBase(privateKeyBase);
       key.setNickname("Test Key");
       key.addEndpoint("https://example.com");
-      key.allow("Sign");
+      key.addAllow("Sign");
 
       const cloned = key.clone();
       expect(cloned.equals(key)).toBe(true);
@@ -256,9 +243,7 @@ describe("Key", () => {
       const envelope = key.privateKeyEnvelope();
       expect(envelope).toBeDefined();
 
-      // Should be a tagged-CBOR PrivateKeys leaf (mirrors Rust). The
-      // earlier port emitted a byte-string leaf, which is what the
-      // previous test asserted.
+      // A tagged-CBOR PrivateKeys leaf, mirroring Rust.
       const leaf = envelope?.subject().asLeaf();
       expect(leaf).toBeDefined();
     });
@@ -301,8 +286,7 @@ describe("Key", () => {
       const decryptedEnvelope = keyEncrypted.privateKeyEnvelope({ password: password });
       expect(decryptedEnvelope).toBeDefined();
 
-      // Decrypted PrivateKeys are now stored as a tagged-CBOR leaf
-      // (mirrors Rust); the previous byte-string assertion is gone.
+      // Decrypted PrivateKeys are stored as a tagged-CBOR leaf, mirroring Rust.
       const leaf = decryptedEnvelope?.subject().asLeaf();
       expect(leaf).toBeDefined();
     });

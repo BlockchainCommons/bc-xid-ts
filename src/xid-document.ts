@@ -37,9 +37,9 @@ import {
   URI,
   XID,
   type Digest,
-  type PublicKeys,
+  PublicKeys,
   PrivateKeyBase,
-  type PrivateKeys,
+  PrivateKeys,
   type Signer,
   type EncapsulationPublicKey,
   type SigningPublicKey,
@@ -48,7 +48,8 @@ import { TAG_XID } from "@blockchaincommons/tags";
 import { type ToUR, type UR, decodeURWith, urFor } from "@blockchaincommons/uniform-resources";
 import { type RngOptions } from "@blockchaincommons/rand";
 import {
-  type ProvenanceMark,
+  type DateInput,
+  ProvenanceMark,
   ProvenanceMarkGenerator,
   type ProvenanceMarkResolution,
   PROVENANCE_MARK_RESOLUTIONS,
@@ -66,7 +67,15 @@ import { Service } from "./service";
 import { Delegate, setDefaultDocumentParser } from "./delegate";
 import { Provenance, type XIDGeneratorOptions } from "./provenance";
 import { XIDError } from "./error";
-import { cborErrorOf, expectOneOf, expectValidDate, guarded, leafAs, wrapForeign } from "./domain";
+import {
+  cborErrorOf,
+  expectDateInput,
+  expectInstance,
+  expectOneOf,
+  guarded,
+  leafAs,
+  wrapForeign,
+} from "./domain";
 
 /**
  * The inception key of a new document: public keys only, a private key
@@ -95,8 +104,8 @@ export interface XIDGenesis {
   seed?: Uint8Array | ProvenanceSeed | undefined;
   /** The chain's resolution; `"high"` unless given. */
   resolution?: ProvenanceMarkResolution | undefined;
-  /** The genesis mark's date; now unless given. */
-  date?: Date | undefined;
+  /** The genesis mark's date, a `Date` or a `CborDate`; now unless given. */
+  date?: DateInput | undefined;
   /** The genesis mark's info. */
   info?: Cbor | undefined;
 }
@@ -153,17 +162,20 @@ export interface AttachmentInput {
   conformsTo?: string | undefined;
 }
 
-/** What `nextProvenanceMark` takes. */
+/** What `nextProvenanceMarkWithEmbeddedGenerator` takes. */
 export interface NextProvenanceMarkOptions extends PasswordOptions {
-  /** The new mark's date; now unless given. */
-  date?: Date | undefined;
+  /** The new mark's date, a `Date` or a `CborDate`; now unless given. */
+  date?: DateInput | undefined;
   /** The new mark's info. */
   info?: Cbor | undefined;
-  /**
-   * A generator kept outside the document; refused when the document
-   * holds one. When given, `password` is not used.
-   */
-  generator?: ProvenanceMarkGenerator | undefined;
+}
+
+/** What `nextProvenanceMarkWithProvidedGenerator` takes besides the generator. */
+export interface ProvidedGeneratorOptions {
+  /** The new mark's date, a `Date` or a `CborDate`; now unless given. */
+  date?: DateInput | undefined;
+  /** The new mark's info. */
+  info?: Cbor | undefined;
 }
 
 /** The document's CBOR codec, with the tag it carries. */
@@ -257,16 +269,27 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
   }
 
   private static keyFor(inceptionKey: XIDInceptionKey): Key {
-    if (typeof inceptionKey !== "object" || inceptionKey === null) {
-      throw new TypeError(
-        "inceptionKey must be PublicKeys, a PrivateKeyBase or { publicKeys, privateKeys }",
+    if (inceptionKey instanceof PublicKeys) return Key.allowAll(inceptionKey);
+    if (inceptionKey instanceof PrivateKeyBase) return Key.fromPrivateKeyBase(inceptionKey);
+    if (
+      typeof inceptionKey === "object" &&
+      inceptionKey !== null &&
+      "privateKeys" in inceptionKey
+    ) {
+      return Key.from(
+        expectInstance(inceptionKey.publicKeys, PublicKeys, "inceptionKey.publicKeys"),
+        {
+          privateKeys: expectInstance(
+            inceptionKey.privateKeys,
+            PrivateKeys,
+            "inceptionKey.privateKeys",
+          ),
+        },
       );
     }
-    if (inceptionKey instanceof PrivateKeyBase) return Key.fromPrivateKeyBase(inceptionKey);
-    if ("privateKeys" in inceptionKey) {
-      return Key.from(inceptionKey.publicKeys, { privateKeys: inceptionKey.privateKeys });
-    }
-    return Key.allowAll(inceptionKey);
+    throw new TypeError(
+      "inceptionKey must be PublicKeys, a PrivateKeyBase or { publicKeys, privateKeys }",
+    );
   }
 
   private static genesisFor(genesis: XIDGenesis | undefined): Provenance | undefined {
@@ -282,12 +305,12 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
       resolution === undefined
         ? "high"
         : expectOneOf(resolution, PROVENANCE_MARK_RESOLUTIONS, "genesis.resolution");
-    const at = date === undefined ? new Date() : expectValidDate(date, "genesis.date");
+    const at = date === undefined ? new Date() : expectDateInput(date, "genesis.date");
     const generator =
       passphrase !== undefined
         ? ProvenanceMarkGenerator.fromPassphrase(res, passphrase)
         : ProvenanceMarkGenerator.from({ res, seed: XIDDocument.seedOf(seed) });
-    const mark = generator.next(at, { info });
+    const mark = guarded(() => generator.next(at, info));
     return Provenance.from(mark, { generator });
   }
 
@@ -344,9 +367,12 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     this._resolutionMethods.set(uri.toString(), uri);
   }
 
-  /** Removes a resolution method; whether it was there. */
-  removeResolutionMethod(method: URI | string): boolean {
-    return this._resolutionMethods.delete(method instanceof URI ? method.toString() : method);
+  /** Removes and returns a resolution method; `undefined` when it was not there. */
+  removeResolutionMethod(method: URI | string): URI | undefined {
+    const key = method.toString();
+    const uri = this._resolutionMethods.get(key);
+    if (uri !== undefined) this._resolutionMethods.delete(key);
+    return uri;
   }
 
   // Keys ----------------------------------------------------------------------
@@ -358,18 +384,19 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
 
   /** Adds a key; `Duplicate` when the public keys are already there. */
   addKey(key: Key): void {
+    expectInstance(key, Key, "key");
     const id = key.reference.toHex();
     if (this._keys.has(id)) throw XIDError.duplicate("key");
     this._keys.set(id, key);
   }
 
   /** The key with these public keys. */
-  key(publicKeys: PublicKeys): Key | undefined {
+  findKeyByPublicKeys(publicKeys: PublicKeys): Key | undefined {
     return this._keys.get(publicKeys.reference().toHex());
   }
 
   /** The key with this reference. */
-  keyByReference(reference: Reference): Key | undefined {
+  findKeyByReference(reference: Reference): Key | undefined {
     for (const key of this._keys.values()) if (key.reference.equals(reference)) return key;
     return undefined;
   }
@@ -395,11 +422,11 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     return key;
   }
 
-  /** The key with these public keys; `KeyNotFoundInDocument` unless it is there. */
-  expectKey(publicKeys: PublicKeys): Key {
-    const key = this.key(publicKeys);
-    if (key === undefined) throw XIDError.keyNotFoundInDocument(publicKeys.toString());
-    return key;
+  /** `KeyNotFoundInDocument` unless the key with these public keys is there. */
+  checkContainsKey(publicKeys: PublicKeys): void {
+    if (this.findKeyByPublicKeys(publicKeys) === undefined) {
+      throw XIDError.keyNotFoundInDocument(publicKeys.toString());
+    }
   }
 
   /** Whether the XID derives from this signing key. */
@@ -446,7 +473,7 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
 
   /** Sets the key's nickname; `NotFound` unless the key is there. */
   setNameForKey(publicKeys: PublicKeys, name: string): void {
-    const key = this.key(publicKeys);
+    const key = this.findKeyByPublicKeys(publicKeys);
     if (key === undefined) throw XIDError.notFound("key");
     key.setNickname(name);
   }
@@ -456,11 +483,11 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     publicKeys: PublicKeys,
     options: PasswordOptions = {},
   ): Envelope | undefined {
-    return this.key(publicKeys)?.privateKeyEnvelope(options);
+    return this.findKeyByPublicKeys(publicKeys)?.privateKeyEnvelope(options);
   }
 
   /** The inception key's private keys of a parsed envelope, unlocked with the password. */
-  static inceptionPrivateKeysFromEnvelope(
+  static extractInceptionPrivateKeysFromEnvelope(
     envelope: Envelope,
     { password }: PasswordOptions = {},
   ): PrivateKeys | undefined {
@@ -476,18 +503,19 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
 
   /** Adds a delegate; `Duplicate` when a delegate with that XID is already there. */
   addDelegate(delegate: Delegate): void {
+    expectInstance(delegate, Delegate, "delegate");
     const id = delegate.xid.toHex();
     if (this._delegates.has(id)) throw XIDError.duplicate("delegate");
     this._delegates.set(id, delegate);
   }
 
   /** The delegate with this XID. */
-  delegate(xid: XID): Delegate | undefined {
+  findDelegateByXid(xid: XID): Delegate | undefined {
     return this._delegates.get(xid.toHex());
   }
 
   /** The delegate whose XID has this reference. */
-  delegateByReference(reference: Reference): Delegate | undefined {
+  findDelegateByReference(reference: Reference): Delegate | undefined {
     for (const d of this._delegates.values()) if (d.reference.equals(reference)) return d;
     return undefined;
   }
@@ -510,11 +538,11 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     return delegate;
   }
 
-  /** The delegate with this XID; `DelegateNotFoundInDocument` unless it is there. */
-  expectDelegate(xid: XID): Delegate {
-    const delegate = this.delegate(xid);
-    if (delegate === undefined) throw XIDError.delegateNotFoundInDocument(xid.toString());
-    return delegate;
+  /** `DelegateNotFoundInDocument` unless the delegate with this XID is there. */
+  checkContainsDelegate(xid: XID): void {
+    if (this.findDelegateByXid(xid) === undefined) {
+      throw XIDError.delegateNotFoundInDocument(xid.toString());
+    }
   }
 
   // Services ------------------------------------------------------------------
@@ -525,12 +553,13 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
   }
 
   /** The service at this URI. */
-  service(uri: URI | string): Service | undefined {
+  findServiceByUri(uri: URI | string): Service | undefined {
     return this._services.get(uri.toString());
   }
 
   /** Adds a service; `Duplicate` when a service at that URI is already there. */
   addService(service: Service): void {
+    expectInstance(service, Service, "service");
     const id = service.uri.toString();
     if (this._services.has(id)) throw XIDError.duplicate("service");
     this._services.set(id, service);
@@ -554,8 +583,8 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
   }
 
   /** Every service references known keys and delegates and allows something. */
-  expectServicesConsistent(): void {
-    for (const service of this._services.values()) this.expectServiceConsistent(service);
+  checkServicesConsistency(): void {
+    for (const service of this._services.values()) this.checkServiceConsistency(service);
   }
 
   /**
@@ -563,18 +592,18 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
    * `UnknownKeyReference`/`UnknownDelegateReference` for one the document
    * lacks, `NoPermissions` without an allowed privilege.
    */
-  expectServiceConsistent(service: Service): void {
+  checkServiceConsistency(service: Service): void {
     const uri = service.uri.toString();
     if (service.keyReferences.size === 0 && service.delegateReferences.size === 0) {
       throw XIDError.noReferences(uri);
     }
     for (const ref of service.keyReferences) {
-      if (this.keyByReference(ref) === undefined) {
+      if (this.findKeyByReference(ref) === undefined) {
         throw XIDError.unknownKeyReference(ref.toString(), uri);
       }
     }
     for (const ref of service.delegateReferences) {
-      if (this.delegateByReference(ref) === undefined) {
+      if (this.findDelegateByReference(ref) === undefined) {
         throw XIDError.unknownDelegateReference(ref.toString(), uri);
       }
     }
@@ -615,7 +644,7 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
   }
 
   /** The attachment with this digest. */
-  attachment(digest: Digest): Envelope | undefined {
+  getAttachment(digest: Digest): Envelope | undefined {
     return this._attachments.get(digest);
   }
 
@@ -649,12 +678,7 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     this._edges.add(edgeEnvelope);
   }
 
-  /** The edge with this digest. */
-  edge(digest: Digest): Envelope | undefined {
-    return this._edges.get(digest);
-  }
-
-  /** `edge(digest)` under the name envelope's `Edgeable` uses. */
+  /** The edge with this digest (envelope's `Edgeable`). */
   getEdge(digest: Digest): Envelope | undefined {
     return this._edges.get(digest);
   }
@@ -683,44 +707,79 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
 
   /** Sets (or clears) the mark, dropping any generator. */
   setProvenance(provenance: ProvenanceMark | undefined): void {
-    this._provenance = provenance === undefined ? undefined : Provenance.from(provenance);
+    this._provenance =
+      provenance === undefined
+        ? undefined
+        : Provenance.from(expectInstance(provenance, ProvenanceMark, "provenance"));
   }
 
   /** Sets the mark and the generator that continues its chain. */
   setProvenanceWithGenerator(generator: ProvenanceMarkGenerator, mark: ProvenanceMark): void {
-    this._provenance = Provenance.from(mark, { generator });
+    this._provenance = Provenance.from(expectInstance(mark, ProvenanceMark, "mark"), {
+      generator: expectInstance(generator, ProvenanceMarkGenerator, "generator"),
+    });
   }
 
   /**
-   * Advances the chain: with the document's own generator (unlocked with
-   * the password when locked), or with a provided one when the document
-   * has none. The generator must continue the current mark's chain at
-   * the next sequence number. `NoProvenanceMark` without a mark,
-   * `NoGenerator`/`GeneratorConflict` for the wrong choice,
-   * `ChainIdMismatch`/`SequenceMismatch` for a generator that does not
-   * continue the mark; an invalid date is a `TypeError`.
+   * Advances the chain with the document's own generator, unlocked with
+   * the password when it is locked; the generator stays in the document.
+   * `NoProvenanceMark` without a mark, `NoGenerator` without a generator,
+   * `InvalidPassword` when it is locked and the password is missing or
+   * wrong, `ChainIdMismatch`/`SequenceMismatch` when the generator does
+   * not continue the mark at the next sequence number; a `Date` without a
+   * time is `ProvenanceMark[InvalidDate]`; a date of another kind is a
+   * `TypeError`.
    */
-  nextProvenanceMark({ date, info, password, generator }: NextProvenanceMarkOptions = {}): void {
-    const at = date === undefined ? new Date() : expectValidDate(date, "date");
+  nextProvenanceMarkWithEmbeddedGenerator({
+    password,
+    date,
+    info,
+  }: NextProvenanceMarkOptions = {}): void {
+    const at = date === undefined ? new Date() : expectDateInput(date, "date");
     if (this._provenance === undefined) throw XIDError.noProvenanceMark();
-    const currentMark = this._provenance.mark;
-    let gen: ProvenanceMarkGenerator;
-    if (generator !== undefined) {
-      if (this._provenance.hasGenerator || this._provenance.hasEncryptedGenerator) {
-        throw XIDError.generatorConflict();
-      }
-      gen = generator;
-    } else {
-      const own = this._provenance.unlockGenerator({ password });
-      if (own === undefined) throw XIDError.noGenerator();
-      gen = own;
+    const generator = this._provenance.unlockGenerator({ password });
+    if (generator === undefined) throw XIDError.noGenerator();
+    this.advance(this._provenance, generator, at, info);
+  }
+
+  /**
+   * Advances the chain with a generator the caller keeps; the generator
+   * is advanced in place and not stored. `NoProvenanceMark` without a
+   * mark, `GeneratorConflict` when the document holds a generator (in the
+   * clear or locked), `ChainIdMismatch`/`SequenceMismatch` when the
+   * generator does not continue the mark at the next sequence number; a
+   * `Date` without a time is `ProvenanceMark[InvalidDate]`; a generator or
+   * date of another kind is a `TypeError`.
+   */
+  nextProvenanceMarkWithProvidedGenerator(
+    generator: ProvenanceMarkGenerator,
+    { date, info }: ProvidedGeneratorOptions = {},
+  ): void {
+    expectInstance(generator, ProvenanceMarkGenerator, "generator");
+    const at = date === undefined ? new Date() : expectDateInput(date, "date");
+    if (this._provenance === undefined) throw XIDError.noProvenanceMark();
+    if (this._provenance.hasGenerator || this._provenance.hasEncryptedGenerator) {
+      throw XIDError.generatorConflict();
     }
-    if (!bytesEqual(gen.chainId, currentMark.chainId)) {
-      throw XIDError.chainIdMismatch(currentMark.chainId, gen.chainId);
+    this.advance(this._provenance, generator, at, info);
+  }
+
+  /** The checks and the step both forms share. */
+  private advance(
+    provenance: Provenance,
+    generator: ProvenanceMarkGenerator,
+    at: DateInput,
+    info: Cbor | undefined,
+  ): void {
+    const currentMark = provenance.mark;
+    if (!bytesEqual(generator.chainId, currentMark.chainId)) {
+      throw XIDError.chainIdMismatch(currentMark.chainId, generator.chainId);
     }
     const expectedSeq = currentMark.seq + 1;
-    if (gen.nextSeq !== expectedSeq) throw XIDError.sequenceMismatch(expectedSeq, gen.nextSeq);
-    this._provenance.setMark(gen.next(at, { info }));
+    if (generator.nextSeq !== expectedSeq) {
+      throw XIDError.sequenceMismatch(expectedSeq, generator.nextSeq);
+    }
+    provenance.setMark(guarded(() => generator.next(at, info)));
   }
 
   // Envelope ------------------------------------------------------------------
@@ -874,7 +933,7 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     }
     doc._attachments = attachments;
     doc._edges = edges;
-    doc.expectServicesConsistent();
+    doc.checkServicesConsistency();
     return doc;
   }
 
@@ -983,6 +1042,7 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
    * the reference's equality.
    */
   equals(other: XIDDocument): boolean {
+    expectInstance(other, XIDDocument, "other", "an XIDDocument");
     if (!this._xid.equals(other._xid)) return false;
     if (this._resolutionMethods.size !== other._resolutionMethods.size) return false;
     for (const key of this._resolutionMethods.keys()) {

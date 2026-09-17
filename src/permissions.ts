@@ -18,14 +18,29 @@ export interface PermissionsInput {
   deny?: Iterable<Privilege> | undefined;
 }
 
-/** Something that carries permissions: a key, a delegate, a service. */
+/**
+ * Something that carries permissions: a key, a delegate, a service. The
+ * members are the reference's `HasPermissions` trait: `allow` and `deny`
+ * are the sets, `addAllow`/`addDeny`/`removeAllow`/`removeDeny` and
+ * `clearAllPermissions` edit them.
+ */
 export interface HasPermissions {
   /** The permissions (live). */
   readonly permissions: Permissions;
+  /** The allowed privileges (a copy). */
+  readonly allow: ReadonlySet<Privilege>;
+  /** The denied privileges (a copy). */
+  readonly deny: ReadonlySet<Privilege>;
   /** Allows `privilege`. */
-  allow(privilege: Privilege): void;
+  addAllow(privilege: Privilege): void;
   /** Denies `privilege`. */
-  deny(privilege: Privilege): void;
+  addDeny(privilege: Privilege): void;
+  /** Stops allowing `privilege`. */
+  removeAllow(privilege: Privilege): void;
+  /** Stops denying `privilege`. */
+  removeDeny(privilege: Privilege): void;
+  /** Empties both sets. */
+  clearAllPermissions(): void;
 }
 
 /** An allow set and a deny set of privileges. */
@@ -79,24 +94,9 @@ export class Permissions {
   }
 
   /** Empties both sets. */
-  clear(): void {
+  clearAllPermissions(): void {
     this._allow.clear();
     this._deny.clear();
-  }
-
-  /**
-   * Allowed (directly or through `All`) and not denied (directly or
-   * through `All`): a denial wins over an allowance. This is the
-   * package's own rule; the reference exposes the sets only.
-   */
-  isAllowed(privilege: Privilege): boolean {
-    if (this._deny.has(privilege) || this._deny.has("All")) return false;
-    return this._allow.has(privilege) || this._allow.has("All");
-  }
-
-  /** Denied directly or through `All`. */
-  isDenied(privilege: Privilege): boolean {
-    return this._deny.has(privilege) || this._deny.has("All");
   }
 
   /** Adds an `'allow'` assertion per allowed privilege, then a `'deny'` per denied one. */

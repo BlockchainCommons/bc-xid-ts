@@ -17,14 +17,14 @@ DUMP=/tmp/rust.json cargo run --release --offline -- ../vectors/vectors.json   #
 Result line on 2026-09-16:
 
 ```
-371 vectors - 353 match, 3 panic-mapped, 15 js-only (J3 12, J4 3), 0 unparsable, 0 MISMATCH
+389 vectors - 362 match, 27 js-only (J3 23, J4 4), 0 unparsable, 0 MISMATCH
 ```
 
 ## What is compared
 
 Every recipe (`tests/vectors/recipes.ts`) yields one outcome string on
 each side and the two are compared textually. The TypeScript outcome is
-the vector's `expect`, materialised by `scripts/generate-vectors.mjs` with
+the vector's `expect`, materialised by `scripts/generate-vectors.ts` with
 the working tree (`tests/vectors/working-tree-adapter.ts`); the
 reference's is computed by `src/main.rs`.
 
@@ -32,10 +32,17 @@ reference's is computed by `src/main.rs`.
   where the output is deterministic, the XID, reference, emptiness,
   counts, resolution methods, services, delegates, provenance, generator,
   a re-parse (`roundtrip`) and an inception-key verification (`verify`).
+  A delegate spec may name resolution methods added to its source
+  document after the delegate was built (`laterResolution`): the
+  delegate's own copy does not carry them on either side.
 - `decode` (a UR into `fromEnvelope` with each verification mode),
-  `mutate` (scripts of mutations with their results), `key` and
-  `provenance` values with each private-key and generator option, the
-  privilege table.
+  `mutate` (scripts of mutations with their results: keys, delegates,
+  services and resolution methods removed or taken, endpoints and
+  service references removed, the consistency checks, both next-mark
+  forms with the caller's generator advanced in place across the script,
+  the generator dropped, clones), `key` and `provenance` values with each
+  private-key and generator option (and, with `take`, what
+  `takeGenerator` hands back and what is left), the privilege table.
 - Hand-assembled envelopes: `docEnvelope`, `keyEnvelope`,
   `serviceEnvelope`, `provenanceEnvelope` build the exact envelope on
   both sides (leaves, known values, references, keys, salts, marks,
@@ -46,13 +53,13 @@ reference's is computed by `src/main.rs`.
   `fromUR` in the reference's three steps (the UR grammar, the type check
   flattened into `dcbor::Error::Custom`, the decoder).
 - `nickname`: `addNickname`/`setNickname` in sequence; `construct`: a
-  caller's input to a constructor (URIs, hex references).
+  caller's URI to a constructor.
 - A rejection is `throw:<code>[<inner code>]|<message>`: the reference's
   error variant, the variant it wraps for `EnvelopeParsing`, `Component`,
   `Cbor` and `ProvenanceMark`, and its `Display`. A decoder entry point
   (`fromCbor`, `fromUntaggedCbor`, `fromUR`) returns the dcbor error itself
   in the reference, so its row reads `throw:Cbor[<dcbor variant>]|<dcbor
-  message>`; inside `fromEnvelope` the wrapping variant's own `Display`
+message>`; inside `fromEnvelope` the wrapping variant's own `Display`
   (`envelope parsing error`, `CBOR error`, …) is the message. A
   constructor's own input passes the components error through
   (`throw:InvalidData|invalid URI: invalid URI format`).
@@ -61,36 +68,58 @@ reference's is computed by `src/main.rs`.
   and the generator pin the port's, so no row reads the runner's home
   directory; then registers envelope's and provenance-mark's tags, as the
   setup file does.
-- Where the reference panics at a call the port rejects with a typed
-  error (`Reference::from_hex` unwraps the hex decode and the size
-  check), `PANIC_MAPPED` in `src/main.rs` names the port's code and the
-  row is `panic-mapped`, compared by code only.
 - `domain` rows are the JavaScript input domain (`js-only`), in two
-  classes here: J3 a value the reference's types cannot express (a `null`
-  where private keys go, a genesis without a source or with a seed of the
-  wrong length, an invalid `Date`, an unknown option string, a missing
-  inception key) and J4 a reference surface the port reaches differently
-  (`random` with a genesis, the default delegate parser, a generator
-  given together with a password).
-- A recipe field this program cannot read is `unparsable`. An unhandled
+  classes: J3, a value the reference's types cannot express (a `null`
+  where private keys go, a genesis without exactly one of a passphrase or
+  a seed, a seed of the wrong length, an invalid `Date`, an unknown option
+  string, a missing inception key, a plain object where a key, service,
+  delegate, mark, generator, provenance or document goes, a string where
+  a mark goes, the arguments of `setProvenanceWithGenerator` swapped);
+  J4, a reference surface this program cannot compare (`random` with a
+  genesis, whose output is random; a JavaScript `Date` at either date
+  input, which this library accepts beside the reference's `CborDate`;
+  generator equality after an envelope round trip).
+- A recipe field this program cannot read is `unparsable`. A reference
   panic, or any other difference, is a MISMATCH. Both make the process
   exit 1.
 
+## Reference behaviours reproduced on purpose
+
+- A service's `'deny'` assertions are written by `toEnvelope` and
+  rejected by `fromEnvelope` (`UnexpectedPredicate`, predicate 61), as the
+  reference's `Service::into_envelope` and `Service::try_from` do. Rows:
+  `serviceEnvelope uri(https://svc.example) +'deny':'Sign'` and the
+  `roundtrip` line of every document whose service denies a privilege.
+  Not yet reported upstream.
+
+## Kept differences
+
+- `Delegate.clone()` and `XIDDocument.clone()` copy the controller
+  documents. The reference holds each controller in a shared handle, so
+  its clones share the controller and two documents stay equal after a
+  mutation made through a clone; that is the mechanism Rust needs to
+  mutate a set element in place, which a JavaScript `Map` does not need.
+  `Delegate.from` copies the controller at construction, as
+  `Delegate::new` does.
+- The JavaScript input domain is checked (`TypeError`); a JavaScript
+  `Date` is accepted wherever the reference takes a `dcbor::Date`; the
+  collection getters return copies of the reference's borrowed sets.
+
 ## Rows that guard the sibling packages
 
-| Sibling behaviour | Rows |
-|---|---|
+| Sibling behaviour                                                                                                                                                                  | Rows                                                                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | envelope: identical assertions are added once; attachments are validated; `NotLeaf`, `NotWrapped`, `AmbiguousPredicate`, `NonexistentPredicate`, `NotKnownValue` inside a document | `docEnvelope … +'delegate':{…},'delegate':{…}`, `docEnvelope … +'attachment':"x"`, the `docEnvelope`/`keyEnvelope`/`serviceEnvelope` rejection rows |
-| components: `Reference` rendering (`Reference(<short hex>)`), URI validity, XID and reference sizes, hex decoding | `docEnvelope … +'service':…['key':ref(e9f1ab8b…)]`, the `construct` rows, `cbor untagged 581f…` |
-| dcbor: tag and type errors named as the reference names them | the `cbor` rows |
-| provenance-mark: mark decoding, generator envelopes, seed length | `provenanceEnvelope` rows, `domain genesis.seed.*` |
-| bc-ur: grammar and type errors | the `ur` rows |
+| components: `Reference` rendering (`Reference(<short hex>)`), URI validity, XID and reference sizes                                                                                | `docEnvelope … +'service':…['key':ref(e9f1ab8b…)]`, the `construct` rows, `cbor untagged 581f…`                                                     |
+| dcbor: tag and type errors named as the reference names them                                                                                                                       | the `cbor` rows                                                                                                                                     |
+| provenance-mark: mark decoding, generator envelopes, seed length                                                                                                                   | `provenanceEnvelope` rows, `domain genesis.seed.*`                                                                                                  |
+| bc-ur: grammar and type errors                                                                                                                                                     | the `ur` rows                                                                                                                                       |
 
 ## Self-checks
 
 `mismatch.json` holds one row with a value flipped; the run must exit 1
 with `1 MISMATCH`. `fixtures/classes.json` holds one row per class and
-must count them as `1 match, 1 panic-mapped, 2 js-only (J3 1, J4 1)`;
+must count them as `1 match, 2 js-only (J3 1, J4 1)`;
 `fixtures/malformed.json` has a recipe kind this program cannot read (`1
 unparsable`) and must exit 1.
 
@@ -108,5 +137,5 @@ anywhere fails the job.
 When the reference moves: update the pins in `Cargo.toml`, run
 `cargo update -p bc-xid`, check the toolchain pin, regenerate the vectors
 (`bun run vectors:generate`), run the replay and copy the result line
-above. A new difference is a bug on one side: fix it, or add the js-only
-class or the panic mapping with its reason in `src/main.rs` and here.
+above. A new difference is a bug on one side: fix it. A JavaScript-only
+input becomes a class in `src/main.rs` and here, never a difference.

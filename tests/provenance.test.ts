@@ -15,7 +15,7 @@ describe("Provenance", () => {
     it("should create provenance with mark", () => {
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generator.next(date, { info: cbor("Test mark") });
+      const mark = generator.next(date, cbor("Test mark"));
 
       const provenance = Provenance.from(mark);
       expect(provenance.mark.equals(mark)).toBe(true);
@@ -32,7 +32,7 @@ describe("Provenance", () => {
     it("should omit generator by default", () => {
       const generatorForMark = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generatorForMark.next(date, { info: cbor("Test mark") });
+      const mark = generatorForMark.next(date, cbor("Test mark"));
 
       // Create a fresh generator for storage
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
@@ -50,7 +50,7 @@ describe("Provenance", () => {
     it("should include generator when specified", () => {
       const generatorForMark = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generatorForMark.next(date, { info: cbor("Test mark") });
+      const mark = generatorForMark.next(date, cbor("Test mark"));
 
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
 
@@ -66,7 +66,7 @@ describe("Provenance", () => {
     it("should elide generator when specified", () => {
       const generatorForMark = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generatorForMark.next(date, { info: cbor("Test mark") });
+      const mark = generatorForMark.next(date, cbor("Test mark"));
 
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
 
@@ -89,7 +89,7 @@ describe("Provenance", () => {
     it("should encrypt and decrypt generator with password", { timeout: 60_000 }, () => {
       const generatorForMark = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generatorForMark.next(date, { info: cbor("Test mark") });
+      const mark = generatorForMark.next(date, cbor("Test mark"));
 
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const password = new TextEncoder().encode("correct_horse_battery_staple");
@@ -124,7 +124,7 @@ describe("Provenance", () => {
     it("should handle all storage modes correctly", { timeout: 30_000 }, () => {
       const generatorForMark = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generatorForMark.next(date, { info: cbor("Test mark") });
+      const mark = generatorForMark.next(date, cbor("Test mark"));
 
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
 
@@ -178,7 +178,7 @@ describe("Provenance", () => {
       // Advance the provenance mark
       const xidDoc2 = xidDoc.clone();
       const date2 = new Date(Date.UTC(2025, 0, 2));
-      xidDoc2.nextProvenanceMark({ date: date2, info: cbor("Second mark") });
+      xidDoc2.nextProvenanceMarkWithEmbeddedGenerator({ date: date2, info: cbor("Second mark") });
 
       // Verify advancement
       const mark2 = xidDoc2.provenance;
@@ -198,7 +198,7 @@ describe("Provenance", () => {
 
       // Generate genesis mark
       const date1 = new Date(Date.UTC(2025, 0, 1));
-      const mark1 = generator.next(date1, { info: cbor("Genesis mark") });
+      const mark1 = generator.next(date1, cbor("Genesis mark"));
 
       // Create XID document WITHOUT embedded generator
       const privateKeyBase = PrivateKeyBase.random();
@@ -214,7 +214,10 @@ describe("Provenance", () => {
 
       // Advance using the provided generator
       const date2 = new Date(Date.UTC(2025, 0, 2));
-      xidDoc.nextProvenanceMark({ generator: generator, date: date2, info: cbor("Second mark") });
+      xidDoc.nextProvenanceMarkWithProvidedGenerator(generator, {
+        date: date2,
+        info: cbor("Second mark"),
+      });
 
       // Verify advancement
       const mark2 = xidDoc.provenance;
@@ -234,11 +237,11 @@ describe("Provenance", () => {
 
       const xidDoc = XIDDocument.from({ inceptionKey: privateKeyBase });
 
-      // X1c: pin the specific error code/message rather than just `.toThrow()`,
-      // so future regressions in error-classification get caught at write time.
+      // Pin the specific error code/message rather than just `.toThrow()`,
+      // so a regression in error-classification gets caught at write time.
       let caught: unknown;
       try {
-        xidDoc.nextProvenanceMark({ info: cbor("Test") });
+        xidDoc.nextProvenanceMarkWithEmbeddedGenerator({ info: cbor("Test") });
       } catch (e) {
         caught = e;
       }
@@ -251,7 +254,7 @@ describe("Provenance", () => {
       // Create a mark without generator
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generator.next(date, { info: cbor("Test") });
+      const mark = generator.next(date, cbor("Test"));
 
       // Create XID document with mark but no generator
       const privateKeyBase = PrivateKeyBase.random();
@@ -262,7 +265,7 @@ describe("Provenance", () => {
       xidDoc.setProvenance(mark);
 
       expect(() => {
-        xidDoc.nextProvenanceMark({ info: cbor("Test") });
+        xidDoc.nextProvenanceMarkWithEmbeddedGenerator({ info: cbor("Test") });
       }).toThrow();
     });
 
@@ -282,7 +285,7 @@ describe("Provenance", () => {
       // Try to advance with provided generator (should fail because document has embedded generator)
       let caught: unknown;
       try {
-        xidDoc.nextProvenanceMark({ generator: externalGenerator, info: cbor("Test") });
+        xidDoc.nextProvenanceMarkWithProvidedGenerator(externalGenerator, { info: cbor("Test") });
       } catch (e) {
         caught = e;
       }
@@ -297,7 +300,7 @@ describe("Provenance", () => {
       // Create a mark with one generator
       const generator1 = ProvenanceMarkGenerator.fromPassphrase("high", "passphrase1");
       const date1 = new Date(Date.UTC(2025, 0, 1));
-      const mark1 = generator1.next(date1, { info: cbor("Test") });
+      const mark1 = generator1.next(date1, cbor("Test"));
 
       // Create XID document with mark but no embedded generator
       const privateKeyBase = PrivateKeyBase.random();
@@ -312,7 +315,7 @@ describe("Provenance", () => {
 
       let caught: unknown;
       try {
-        xidDoc.nextProvenanceMark({ generator: generator2, info: cbor("Test") });
+        xidDoc.nextProvenanceMarkWithProvidedGenerator(generator2, { info: cbor("Test") });
       } catch (e) {
         caught = e;
       }
@@ -338,11 +341,11 @@ describe("Provenance", () => {
       // Create a mark at seq 0
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test");
       const date1 = new Date(Date.UTC(2025, 0, 1));
-      const mark1 = generator.next(date1, { info: cbor("Test") });
+      const mark1 = generator.next(date1, cbor("Test"));
 
       // Advance generator to seq 2 (skip seq 1)
       const date2 = new Date(Date.UTC(2025, 0, 2));
-      generator.next(date2, { info: cbor("Test") });
+      generator.next(date2, cbor("Test"));
 
       // Create XID document with mark at seq 0
       const privateKeyBase = PrivateKeyBase.random();
@@ -355,7 +358,7 @@ describe("Provenance", () => {
       // Try to advance with generator at seq 2 (expecting seq 1)
       let caught: unknown;
       try {
-        xidDoc.nextProvenanceMark({ generator: generator, info: cbor("Test") });
+        xidDoc.nextProvenanceMarkWithProvidedGenerator(generator, { info: cbor("Test") });
       } catch (e) {
         caught = e;
       }
@@ -365,10 +368,9 @@ describe("Provenance", () => {
       expect((caught as XIDError).message).toBe("generator sequence mismatch: expected 1, got 2");
     });
 
-    it("should error when document has no provenance and provided-generator advance is attempted (X1c)", () => {
-      // Pins the X1c "no-provenance" branch of `nextProvenanceMarkWithProvidedGenerator`
-      // — distinct from the "no-provenance" branch of the embedded variant
-      // already covered above.
+    it("should error when document has no provenance and provided-generator advance is attempted", () => {
+      // The "no-provenance" branch of the provided-generator form, distinct
+      // from the embedded form's covered above.
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test");
       const privateKeyBase = PrivateKeyBase.random();
       const xidDocBase = XIDDocument.from({
@@ -379,7 +381,7 @@ describe("Provenance", () => {
 
       let caught: unknown;
       try {
-        xidDoc.nextProvenanceMark({ generator: generator, info: cbor("Test") });
+        xidDoc.nextProvenanceMarkWithProvidedGenerator(generator, { info: cbor("Test") });
       } catch (e) {
         caught = e;
       }
@@ -393,7 +395,7 @@ describe("Provenance", () => {
     it("should encrypt with Argon2id, PBKDF2, and Scrypt", { timeout: 30_000 }, () => {
       const generatorForMark = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generatorForMark.next(date, { info: cbor("Test mark") });
+      const mark = generatorForMark.next(date, cbor("Test mark"));
 
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const password = new TextEncoder().encode("test_password_123");
@@ -432,7 +434,7 @@ describe("Provenance", () => {
     it("should return undefined when no generator", () => {
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generator.next(date, { info: cbor("Test mark") });
+      const mark = generator.next(date, cbor("Test mark"));
       const provenance = Provenance.from(mark);
 
       const result = provenance.generatorEnvelope();
@@ -442,7 +444,7 @@ describe("Provenance", () => {
     it("should return envelope for unencrypted generator", () => {
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generator.next(date, { info: cbor("Test mark") });
+      const mark = generator.next(date, cbor("Test mark"));
       const provenance = Provenance.from(mark, { generator: generator });
 
       const envelope = provenance.generatorEnvelope();
@@ -452,7 +454,7 @@ describe("Provenance", () => {
     it("should return encrypted envelope when no password provided", { timeout: 60_000 }, () => {
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generator.next(date, { info: cbor("Test mark") });
+      const mark = generator.next(date, cbor("Test mark"));
       const provenance = Provenance.from(mark, { generator: generator });
       const password = "test-password";
 
@@ -476,7 +478,7 @@ describe("Provenance", () => {
     it("should decrypt envelope with correct password", { timeout: 30_000 }, () => {
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generator.next(date, { info: cbor("Test mark") });
+      const mark = generator.next(date, cbor("Test mark"));
       const provenance = Provenance.from(mark, { generator: generator });
       const password = "test-password";
 
@@ -495,7 +497,7 @@ describe("Provenance", () => {
     it("should throw on wrong password", { timeout: 30_000 }, () => {
       const generator = ProvenanceMarkGenerator.fromPassphrase("high", "test_passphrase");
       const date = new Date(Date.UTC(2025, 0, 1));
-      const mark = generator.next(date, { info: cbor("Test mark") });
+      const mark = generator.next(date, cbor("Test mark"));
       const provenance = Provenance.from(mark, { generator: generator });
       const password = "test-password";
 
@@ -542,7 +544,7 @@ describe("Provenance", () => {
 
       // Advance with correct password
       const date2 = new Date(Date.UTC(2025, 0, 2));
-      xidDocEncrypted.nextProvenanceMark({
+      xidDocEncrypted.nextProvenanceMarkWithEmbeddedGenerator({
         password: password,
         date: date2,
         info: cbor("Second mark"),
@@ -580,7 +582,10 @@ describe("Provenance", () => {
       // Try to advance with wrong password
       const wrongPassword = new TextEncoder().encode("wrong_password");
       expect(() => {
-        xidDocEncrypted.nextProvenanceMark({ password: wrongPassword, info: cbor("Test") });
+        xidDocEncrypted.nextProvenanceMarkWithEmbeddedGenerator({
+          password: wrongPassword,
+          info: cbor("Test"),
+        });
       }).toThrow();
     });
   });

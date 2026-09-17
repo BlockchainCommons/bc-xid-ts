@@ -8,6 +8,7 @@ import { Attachments } from '@blockchaincommons/envelope/attachment';
 import { Cbor } from '@blockchaincommons/dcbor';
 import { CborCodec } from '@blockchaincommons/dcbor';
 import { CborTagged } from '@blockchaincommons/dcbor';
+import { DateInput } from '@blockchaincommons/provenance-mark';
 import { Digest } from '@blockchaincommons/components';
 import { Edgeable } from '@blockchaincommons/envelope/edge';
 import { Edges } from '@blockchaincommons/envelope/edge';
@@ -48,17 +49,24 @@ export interface AttachmentInput {
 // @public
 export type ChainIdMismatchDetails = XIDErrorDetailsFor<"ChainIdMismatch">;
 
+export { DateInput }
+
 // @public
 export class Delegate implements HasPermissions {
-    allow(privilege: Privilege): void;
+    addAllow(privilege: Privilege): void;
+    addDeny(privilege: Privilege): void;
+    get allow(): ReadonlySet<Privilege>;
+    clearAllPermissions(): void;
     clone(): Delegate;
     get controller(): XIDDocumentLike;
-    deny(privilege: Privilege): void;
+    get deny(): ReadonlySet<Privilege>;
     equals(other: Delegate): boolean;
     static from(controller: XIDDocumentLike, input?: DelegateInput): Delegate;
-    static fromEnvelope(envelope: Envelope, input?: DelegateParseOptions): Delegate;
+    static fromEnvelope(envelope: Envelope): Delegate;
     get permissions(): Permissions;
     get reference(): Reference;
+    removeAllow(privilege: Privilege): void;
+    removeDeny(privilege: Privilege): void;
     toEnvelope(): Envelope;
     get xid(): XID;
 }
@@ -72,9 +80,7 @@ export interface DelegateInput {
 export type DelegateNotFoundDetails = XIDErrorDetailsFor<"DelegateNotFoundInDocument">;
 
 // @public
-export interface DelegateParseOptions {
-    parseDocument?: ParseXIDDocument | undefined;
-}
+export type EmptyValueDetails = XIDErrorDetailsFor<"EmptyValue">;
 
 // @public
 export interface EncryptOptions {
@@ -83,26 +89,44 @@ export interface EncryptOptions {
 }
 
 // @public
+export type GeneratorData = {
+    type: "decrypted";
+    generator: ProvenanceMarkGenerator;
+} | {
+    type: "encrypted";
+    envelope: Envelope;
+};
+
+// @public
 export interface HasPermissions {
-    allow(privilege: Privilege): void;
-    deny(privilege: Privilege): void;
+    addAllow(privilege: Privilege): void;
+    addDeny(privilege: Privilege): void;
+    readonly allow: ReadonlySet<Privilege>;
+    clearAllPermissions(): void;
+    readonly deny: ReadonlySet<Privilege>;
     readonly permissions: Permissions;
+    removeAllow(privilege: Privilege): void;
+    removeDeny(privilege: Privilege): void;
 }
 
 // @public
 export function isPrivilege(value: unknown): value is Privilege;
 
 // @public
-export type ItemDetails = XIDErrorDetailsFor<"Duplicate" | "NotFound" | "StillReferenced" | "EmptyValue">;
+export type ItemDetails = XIDErrorDetailsFor<"Duplicate" | "NotFound" | "StillReferenced">;
 
 // @public
 export class Key implements HasPermissions, Verifier {
+    addAllow(privilege: Privilege): void;
+    addDeny(privilege: Privilege): void;
     addEndpoint(endpoint: URI | string): void;
     addNickname(name: string): void;
-    allow(privilege: Privilege): void;
+    addPermission(privilege: Privilege): void;
+    get allow(): ReadonlySet<Privilege>;
     static allowAll(publicKeys: PublicKeys): Key;
+    clearAllPermissions(): void;
     clone(): Key;
-    deny(privilege: Privilege): void;
+    get deny(): ReadonlySet<Privilege>;
     encapsulationPublicKey(): EncapsulationPublicKey;
     get endpoints(): ReadonlySet<URI>;
     equals(other: Key): boolean;
@@ -118,6 +142,9 @@ export class Key implements HasPermissions, Verifier {
     get privateKeySalt(): Salt | undefined;
     get publicKeys(): PublicKeys;
     get reference(): Reference;
+    removeAllow(privilege: Privilege): void;
+    removeDeny(privilege: Privilege): void;
+    removeEndpoint(endpoint: URI | string): boolean;
     setNickname(name: string): void;
     get signingPublicKey(): SigningPublicKey;
     toEnvelope(input?: KeyEnvelopeOptions): Envelope;
@@ -142,13 +169,9 @@ export type KeyNotFoundDetails = XIDErrorDetailsFor<"KeyNotFoundInDocument">;
 
 // @public
 export interface NextProvenanceMarkOptions extends PasswordOptions {
-    date?: Date | undefined;
-    generator?: ProvenanceMarkGenerator | undefined;
+    date?: DateInput | undefined;
     info?: Cbor | undefined;
 }
-
-// @public
-export type ParseXIDDocument = (envelope: Envelope) => XIDDocumentLike;
 
 // @public
 export interface PasswordOptions {
@@ -162,14 +185,12 @@ export class Permissions {
     addToEnvelope(envelope: Envelope): Envelope;
     get allow(): ReadonlySet<Privilege>;
     static allowAll(): Permissions;
-    clear(): void;
+    clearAllPermissions(): void;
     clone(): Permissions;
     get deny(): ReadonlySet<Privilege>;
     equals(other: Permissions): boolean;
     static from(input?: PermissionsInput): Permissions;
     static fromEnvelope(envelope: Envelope): Permissions;
-    isAllowed(privilege: Privilege): boolean;
-    isDenied(privilege: Privilege): boolean;
     removeAllow(privilege: Privilege): void;
     removeDeny(privilege: Privilege): void;
 }
@@ -215,7 +236,7 @@ export class Provenance {
     get mark(): ProvenanceMark;
     setGenerator(generator: ProvenanceMarkGenerator): void;
     setMark(mark: ProvenanceMark): void;
-    takeGenerator(): boolean;
+    takeGenerator(): TakenGenerator | undefined;
     toEnvelope(input?: ProvenanceEnvelopeOptions): Envelope;
     unlockGenerator(input?: PasswordOptions): ProvenanceMarkGenerator | undefined;
 }
@@ -231,26 +252,33 @@ export interface ProvenanceInput {
 }
 
 // @public
+export interface ProvidedGeneratorOptions {
+    date?: DateInput | undefined;
+    info?: Cbor | undefined;
+}
+
+// @public
 export type SequenceMismatchDetails = XIDErrorDetailsFor<"SequenceMismatch">;
 
 // @public
 export class Service implements HasPermissions {
+    addAllow(privilege: Privilege): void;
     addCapability(capability: string): void;
     addDelegate(delegate: {
         readonly xid: XID;
     }): void;
     addDelegateReference(delegateReference: Reference): void;
-    addDelegateReferenceHex(delegateReferenceHex: string): void;
+    addDeny(privilege: Privilege): void;
     addKey(key: {
         readonly publicKeys: PublicKeys;
     }): void;
     addKeyReference(keyReference: Reference): void;
-    addKeyReferenceHex(keyReferenceHex: string): void;
-    allow(privilege: Privilege): void;
+    get allow(): ReadonlySet<Privilege>;
     get capability(): string;
+    clearAllPermissions(): void;
     clone(): Service;
     get delegateReferences(): ReadonlySet<Reference>;
-    deny(privilege: Privilege): void;
+    get deny(): ReadonlySet<Privilege>;
     equals(other: Service): boolean;
     static from(uri: URI | string, input?: ServiceInput): Service;
     static fromEnvelope(envelope: Envelope): Service;
@@ -259,6 +287,10 @@ export class Service implements HasPermissions {
     get keyReferences(): ReadonlySet<Reference>;
     get name(): string;
     get permissions(): Permissions;
+    removeAllow(privilege: Privilege): void;
+    removeDelegateReference(reference: Reference): boolean;
+    removeDeny(privilege: Privilege): void;
+    removeKeyReference(reference: Reference): boolean;
     setCapability(capability: string): void;
     setName(name: string): void;
     toEnvelope(): Envelope;
@@ -283,6 +315,12 @@ export interface SignedEnvelopeOptions {
 }
 
 // @public
+export interface TakenGenerator {
+    readonly data: GeneratorData;
+    readonly salt: Salt;
+}
+
+// @public
 export type UnexpectedPredicateDetails = XIDErrorDetailsFor<"UnexpectedPredicate">;
 
 // @public
@@ -302,45 +340,46 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     addKey(key: Key): void;
     addResolutionMethod(method: URI | string): void;
     addService(service: Service): void;
-    attachment(digest: Digest): Envelope | undefined;
     get attachments(): Attachments;
     cborTags(): Tag[];
+    checkContainsDelegate(xid: XID): void;
+    checkContainsKey(publicKeys: PublicKeys): void;
+    checkServiceConsistency(service: Service): void;
+    checkServicesConsistency(): void;
     clearAttachments(): void;
     clearEdges(): void;
     clone(): XIDDocument;
     static get codec(): XIDDocumentCodec;
-    delegate(xid: XID): Delegate | undefined;
-    delegateByReference(reference: Reference): Delegate | undefined;
     get delegates(): readonly Delegate[];
-    edge(digest: Digest): Envelope | undefined;
     edges(): Edges;
     edgesMut(): Edges;
     get encryptionKey(): EncapsulationPublicKey | undefined;
     equals(other: XIDDocument): boolean;
-    expectDelegate(xid: XID): Delegate;
-    expectKey(publicKeys: PublicKeys): Key;
-    expectServiceConsistent(service: Service): void;
-    expectServicesConsistent(): void;
     get extraAssertions(): readonly Envelope[];
+    static extractInceptionPrivateKeysFromEnvelope(envelope: Envelope, input?: PasswordOptions): PrivateKeys | undefined;
+    findDelegateByReference(reference: Reference): Delegate | undefined;
+    findDelegateByXid(xid: XID): Delegate | undefined;
+    findKeyByPublicKeys(publicKeys: PublicKeys): Key | undefined;
+    findKeyByReference(reference: Reference): Key | undefined;
+    findServiceByUri(uri: URI | string): Service | undefined;
     static from(input: XIDDocumentInput): XIDDocument;
     static fromCbor(cborValue: Cbor): XIDDocument;
     static fromEnvelope(envelope: Envelope, input?: XIDParseOptions): XIDDocument;
     static fromUntaggedCbor(cborValue: Cbor): XIDDocument;
     static fromUR(ur: UR): XIDDocument;
     static fromXid(xid: XID): XIDDocument;
+    getAttachment(digest: Digest): Envelope | undefined;
     getEdge(digest: Digest): Envelope | undefined;
     get hasAttachments(): boolean;
     hasEdges(): boolean;
     get inceptionKey(): Key | undefined;
     get inceptionPrivateKeys(): PrivateKeys | undefined;
-    static inceptionPrivateKeysFromEnvelope(envelope: Envelope, input?: PasswordOptions): PrivateKeys | undefined;
     get inceptionSigningKey(): SigningPublicKey | undefined;
     get isEmpty(): boolean;
     isInceptionSigningKey(signingPublicKey: SigningPublicKey): boolean;
-    key(publicKeys: PublicKeys): Key | undefined;
-    keyByReference(reference: Reference): Key | undefined;
     get keys(): readonly Key[];
-    nextProvenanceMark(input?: NextProvenanceMarkOptions): void;
+    nextProvenanceMarkWithEmbeddedGenerator(input?: NextProvenanceMarkOptions): void;
+    nextProvenanceMarkWithProvidedGenerator(generator: ProvenanceMarkGenerator, input?: ProvidedGeneratorOptions): void;
     privateKeyEnvelopeForKey(publicKeys: PublicKeys, options?: PasswordOptions): Envelope | undefined;
     get provenance(): ProvenanceMark | undefined;
     get provenanceGenerator(): ProvenanceMarkGenerator | undefined;
@@ -351,10 +390,9 @@ export class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeab
     removeEdge(digest: Digest): Envelope | undefined;
     removeInceptionKey(): Key | undefined;
     removeKey(publicKeys: PublicKeys): Key;
-    removeResolutionMethod(method: URI | string): boolean;
+    removeResolutionMethod(method: URI | string): URI | undefined;
     removeService(uri: URI | string): Service;
     get resolutionMethods(): ReadonlySet<URI>;
-    service(uri: URI | string): Service | undefined;
     get services(): readonly Service[];
     servicesReferenceDelegate(xid: XID): boolean;
     servicesReferenceKey(publicKeys: PublicKeys): boolean;
@@ -464,7 +502,7 @@ export interface XIDErrorDetailsByCode {
         readonly item: string;
     };
     EmptyValue: {
-        readonly item: string;
+        readonly field: string;
     };
     EnvelopeNotSigned: unknown;
     EnvelopeParsing: {
@@ -532,7 +570,7 @@ export type XIDGeneratorOptions = "omit" | "include" | "elide" | EncryptOptions;
 
 // @public
 export interface XIDGenesis {
-    date?: Date | undefined;
+    date?: DateInput | undefined;
     info?: Cbor | undefined;
     passphrase?: string | undefined;
     resolution?: ProvenanceMarkResolution | undefined;

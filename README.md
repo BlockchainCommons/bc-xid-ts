@@ -24,6 +24,7 @@ bun add @blockchaincommons/xid
 
 ```typescript
 import { PrivateKeyBase } from "@blockchaincommons/components";
+import { CborDate } from "@blockchaincommons/dcbor";
 import { registerTags } from "@blockchaincommons/provenance-mark";
 import { XIDDocument, Key, Service } from "@blockchaincommons/xid";
 
@@ -34,16 +35,26 @@ const doc = XIDDocument.from({
   genesis: { passphrase: "wolf", resolution: "low" },
 });
 doc.addResolutionMethod("https://resolver.example.com");
-const service = Service.from("https://messaging.example.com", { capability: "com.example.messaging" });
+const service = Service.from("https://messaging.example.com", {
+  capability: "com.example.messaging",
+});
 service.addKey(doc.inceptionKey!);
-service.allow("Sign");
+service.addAllow("Sign");
 doc.addService(service);
 
 const signed = doc.toEnvelope({ privateKeys: { encrypt: "password" }, sign: "inception" });
 const back = XIDDocument.fromEnvelope(signed, { password: "password", verify: "inception" });
 back.equals(doc); // true
 doc.toUR().toString(); // "ur:xid/…"
+doc.nextProvenanceMarkWithEmbeddedGenerator({
+  date: CborDate.fromString("2025-06-01T00:00:00Z"), // a `Date` works too
+});
 ```
+
+Every argument is checked at the boundary: a value that is not the class the
+API names (a plain object where a `Key`, `Service`, `Delegate`,
+`ProvenanceMark`, `ProvenanceMarkGenerator` or document goes, a date that is
+neither a `Date` nor a `CborDate`) is a `TypeError` naming the argument.
 
 Runnable examples live in the [`examples/`](https://github.com/BlockchainCommons/bc-xid-ts/tree/master/examples) directory.
 
@@ -53,6 +64,7 @@ Runnable examples live in the [`examples/`](https://github.com/BlockchainCommons
 
 ### Version History
 
+- **1.0.0-beta.3 (September 16, 2026)** - Dates take a `Date` or a `CborDate` (`DateInput`); every object argument is checked for its class; `Provenance.equals` compares generators through `ProvenanceMarkGenerator.equals`; the surface follows the reference's names (`findKeyByPublicKeys`, `checkContainsKey`, `addAllow`/`removeAllow`/`clearAllPermissions`, the two `nextProvenanceMarkWith…Generator` methods, `getAttachment`); `Delegate.from` copies its controller; endpoints and service references can be removed; `takeGenerator` and `removeResolutionMethod` return what they removed; the frozen baseline is this package's beta.2; a runnable `examples/document.ts`.
 - **1.0.0-beta.2 (September 16, 2026)** - Every decode failure is an `XIDError` with the reference's codes and messages; strict CBOR decoders (`fromCbor`, `fromUntaggedCbor`); typed error details; `addNickname`; options objects throughout; the JavaScript input domain checked.
 - **1.0.0-beta.1 (September 9, 2026)** - Initial beta implementation.
 
@@ -96,7 +108,7 @@ The best place to talk about Blockchain Commons and its projects is in our GitHu
 
 [**Gordian User Community**](https://github.com/BlockchainCommons/Gordian/discussions). For users of the Gordian reference apps, including [Gordian Coordinator](https://github.com/BlockchainCommons/iOS-GordianCoordinator), [Gordian Seed Tool](https://github.com/BlockchainCommons/GordianSeedTool-iOS), [Gordian Server](https://github.com/BlockchainCommons/GordianServer-macOS), [Gordian Wallet](https://github.com/BlockchainCommons/GordianWallet-iOS), and [SpotBit](https://github.com/BlockchainCommons/spotbit) as well as our whole series of [CLI apps](https://github.com/BlockchainCommons/Gordian/blob/master/Docs/Overview-Apps.md#cli-apps). This is a place to talk about bug reports and feature requests as well as to explore how our reference apps embody the [Gordian Principles](https://github.com/BlockchainCommons/Gordian#gordian-principles).
 
-[**Blockchain Commons Discussions**](https://github.com/BlockchainCommons/Community/discussions). For developers, interns, and patrons of Blockchain Commons, please use the discussions area of the [Community repo](https://github.com/BlockchainCommons/Community) to talk about general Blockchain Commons issues, the intern program, or topics other than those covered by the [Gordian Developer Community](https://github.com/BlockchainCommons/Gordian-Developer-Community/discussions) or the 
+[**Blockchain Commons Discussions**](https://github.com/BlockchainCommons/Community/discussions). For developers, interns, and patrons of Blockchain Commons, please use the discussions area of the [Community repo](https://github.com/BlockchainCommons/Community) to talk about general Blockchain Commons issues, the intern program, or topics other than those covered by the [Gordian Developer Community](https://github.com/BlockchainCommons/Gordian-Developer-Community/discussions) or the
 [Gordian User Community](https://github.com/BlockchainCommons/Gordian/discussions).
 
 ### Other Questions & Problems
@@ -109,11 +121,11 @@ If your company requires support to use our projects, please feel free to contac
 
 The following people directly contributed to this repository. You can add your name here by getting involved. The first step is learning how to contribute from our [CONTRIBUTING.md](./CONTRIBUTING.md) documentation.
 
-| Name              | Role                | Github                                            | Email                                 | GPG Fingerprint                                    |
-| ----------------- | ------------------- | ------------------------------------------------- | ------------------------------------- | -------------------------------------------------- |
-| Christopher Allen | Principal Architect | [@ChristopherA](https://github.com/ChristopherA) | \<ChristopherA@LifeWithAlacrity.com\> | FDFE 14A5 4ECB 30FC 5D22  74EF F8D3 6C91 3574 05ED |
-| Wolf McNally      | Lead Researcher/Engineer | [@wolfmcnally](https://github.com/wolfmcnally) | \<Wolf@WolfMcNally.com\> | 9436 52EE 3844 1760 C3DC  3536 4B6C 2FCF 8947 80AE |
-| Leonardo Custodio | Software Engineer | [@leonardocustodio](https://github.com/leonardocustodio) | \<leonardo@snowpine.io\> | 59DA D997 67EF 3BAB 2B90 D057 5384 DEF3 B582 450D |
+| Name              | Role                     | Github                                                   | Email                                 | GPG Fingerprint                                   |
+| ----------------- | ------------------------ | -------------------------------------------------------- | ------------------------------------- | ------------------------------------------------- |
+| Christopher Allen | Principal Architect      | [@ChristopherA](https://github.com/ChristopherA)         | \<ChristopherA@LifeWithAlacrity.com\> | FDFE 14A5 4ECB 30FC 5D22 74EF F8D3 6C91 3574 05ED |
+| Wolf McNally      | Lead Researcher/Engineer | [@wolfmcnally](https://github.com/wolfmcnally)           | \<Wolf@WolfMcNally.com\>              | 9436 52EE 3844 1760 C3DC 3536 4B6C 2FCF 8947 80AE |
+| Leonardo Custodio | Software Engineer        | [@leonardocustodio](https://github.com/leonardocustodio) | \<leonardo@snowpine.io\>              | 59DA D997 67EF 3BAB 2B90 D057 5384 DEF3 B582 450D |
 
 ### Contributing Sponsor
 
@@ -133,8 +145,8 @@ Please report suspected security vulnerabilities in private via email to Christo
 
 The following keys may be used to communicate sensitive information to developers:
 
-| Name              | Fingerprint                                        |
-| ----------------- | -------------------------------------------------- |
-| Christopher Allen | FDFE 14A5 4ECB 30FC 5D22  74EF F8D3 6C91 3574 05ED |
+| Name              | Fingerprint                                       |
+| ----------------- | ------------------------------------------------- |
+| Christopher Allen | FDFE 14A5 4ECB 30FC 5D22 74EF F8D3 6C91 3574 05ED |
 
 You can import a key by running the following command with that individual’s fingerprint: `gpg --recv-keys "<fingerprint>"` Ensure that you put quotes around fingerprints that contain spaces.

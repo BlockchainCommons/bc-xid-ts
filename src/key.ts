@@ -245,6 +245,11 @@ export class Key implements HasPermissions, Verifier {
     this._endpoints.set(uri.toString(), uri);
   }
 
+  /** Removes an endpoint; whether it was there. */
+  removeEndpoint(endpoint: URI | string): boolean {
+    return this._endpoints.delete(endpoint.toString());
+  }
+
   /** The nickname; empty when there is none. */
   get nickname(): string {
     return this._nickname;
@@ -267,14 +272,44 @@ export class Key implements HasPermissions, Verifier {
     return this._permissions;
   }
 
+  /** The allowed privileges (a copy). */
+  get allow(): ReadonlySet<Privilege> {
+    return this._permissions.allow;
+  }
+
+  /** The denied privileges (a copy). */
+  get deny(): ReadonlySet<Privilege> {
+    return this._permissions.deny;
+  }
+
   /** Allows `privilege`. */
-  allow(privilege: Privilege): void {
+  addAllow(privilege: Privilege): void {
     this._permissions.addAllow(privilege);
   }
 
   /** Denies `privilege`. */
-  deny(privilege: Privilege): void {
+  addDeny(privilege: Privilege): void {
     this._permissions.addDeny(privilege);
+  }
+
+  /** Stops allowing `privilege`. */
+  removeAllow(privilege: Privilege): void {
+    this._permissions.removeAllow(privilege);
+  }
+
+  /** Stops denying `privilege`. */
+  removeDeny(privilege: Privilege): void {
+    this._permissions.removeDeny(privilege);
+  }
+
+  /** Empties both sets. */
+  clearAllPermissions(): void {
+    this._permissions.clearAllPermissions();
+  }
+
+  /** `addAllow` under the reference's `Key::add_permission` name. */
+  addPermission(privilege: Privilege): void {
+    this._permissions.addAllow(privilege);
   }
 
   private privateKeyAssertionEnvelope(): Envelope {

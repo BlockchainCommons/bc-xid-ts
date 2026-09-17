@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`boundary behaviours > a CborDate at the date inputs 1`] = `
+[
+  "0",
+  "1",
+  "throw:ProvenanceMark|provenance mark error",
+]
+`;
+
+exports[`boundary behaviours > plain objects where instances go 1`] = `
+[
+  "throw:TypeError|inceptionKey must be PublicKeys, a PrivateKeyBase or { publicKeys, privateKeys }",
+  "throw:TypeError|inceptionKey.publicKeys must be a PublicKeys",
+  "throw:TypeError|key must be a Key",
+  "throw:TypeError|service must be a Service",
+  "throw:TypeError|delegate must be a Delegate",
+  "throw:TypeError|other must be an XIDDocument",
+  "throw:TypeError|generator must be a ProvenanceMarkGenerator",
+  "throw:TypeError|provenance must be a ProvenanceMark",
+  "throw:TypeError|mark must be a ProvenanceMark",
+  "throw:TypeError|mark must be a ProvenanceMark",
+  "throw:TypeError|other must be a Provenance",
+]
+`;

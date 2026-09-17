@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.0.0-beta.3 - 2026-09-16
+
+### Changed (breaking)
+
+- **Dates are `DateInput`.** `XIDGenesis.date` and the next-mark options' `date` take a `Date` or a `CborDate` (provenance-mark's `DateInput`, re-exported), as every date input in envelope, gstp and provenance-mark does. A value of another kind is a `TypeError`; a `Date` without a time is now `ProvenanceMark` with cause `InvalidDate`, the generator's own check, where it was a `TypeError`.
+- **Object arguments are checked for their class.** An argument that is not the class the API names is a `TypeError` naming the argument: the inception key (`PublicKeys`, a `PrivateKeyBase`, or a pair whose `publicKeys` and `privateKeys` are checked), `addKey`, `addService`, `addDelegate`, `setProvenance`, both arguments of `setProvenanceWithGenerator`, the generator of `nextProvenanceMarkWithProvidedGenerator`, `Provenance.from`, `setMark`, `setGenerator`, and `XIDDocument.equals`/`Provenance.equals`. A plain object used to crash inside a sibling package (`undefined is not an object`) or, for the marks, to be stored and fail at the next `toEnvelope`. `Provenance.equals` names its own argument (`other must be a Provenance`).
+- `Provenance.equals` compares generators through `ProvenanceMarkGenerator.equals` instead of their JSON.
+- **`Delegate.from` copies the controller.** The delegate holds its own copy of the document it was built from, taken at construction, as the reference's `Delegate::new` clones it; a later change to the caller's document is not seen. `delegate.controller` is the live handle to that copy. (`Delegate.clone()` and `XIDDocument.clone()` still copy; the reference's clones share the controller through its `Shared` handle, a mechanism a JavaScript `Map` does not need.)
+- **`HasPermissions` carries the reference's names.** On `Key`, `Service`, `Delegate` and `Permissions`: `allow` and `deny` are the read-only sets, `addAllow`, `addDeny`, `removeAllow`, `removeDeny` and `clearAllPermissions` edit them; `Key.addPermission` is the reference's alias of `addAllow`. The carriers' `allow(p)`/`deny(p)` adders and `Permissions.clear` are gone, as are `Permissions.isAllowed`/`isDenied`, a precedence rule the reference does not define.
+- **Lookups, checks and extraction under the reference's names.** `findKeyByPublicKeys`, `findKeyByReference`, `findDelegateByXid`, `findDelegateByReference`, `findServiceByUri`; `checkContainsKey`, `checkContainsDelegate`, `checkServicesConsistency`, `checkServiceConsistency` (all `void`); `extractInceptionPrivateKeysFromEnvelope`; `getAttachment`. `key`, `keyByReference`, `delegate`, `delegateByReference`, `service`, `expectKey`, `expectDelegate`, `expectServicesConsistent`, `expectServiceConsistent`, `inceptionPrivateKeysFromEnvelope`, `attachment` and `edge` are gone (`getEdge` stays).
+- **Two next-mark methods.** `nextProvenanceMarkWithEmbeddedGenerator({ password?, date?, info? })` and `nextProvenanceMarkWithProvidedGenerator(generator, { date?, info? })` replace `nextProvenanceMark`, each with the reference's preconditions (`NoGenerator`/`InvalidPassword`, `GeneratorConflict`); `NextProvenanceMarkOptions` lost `generator`, `ProvidedGeneratorOptions` is new.
+- **Returns that carry the item.** `removeResolutionMethod` returns the `URI` removed (or `undefined`); `Provenance.takeGenerator` returns `TakenGenerator` — the generator as held (`GeneratorData`, in the clear or the locked envelope) with its salt — or `undefined`.
+- **Removals the reference has.** `Key.removeEndpoint`, `Service.removeKeyReference`, `Service.removeDelegateReference` (the reference's `endpoints_mut`, `key_referenecs_mut`, `delegate_references_mut`), each returning whether the item was there.
+- **Gone.** `Service.addKeyReferenceHex`/`addDelegateReferenceHex` (write `addKeyReference(Reference.fromHex(hex))`); `Delegate.fromEnvelope`'s `parseDocument` option with `DelegateParseOptions` and `ParseXIDDocument` (the controller is always parsed with `XIDDocument.fromEnvelope`).
+- `EmptyValue`'s detail is `field`, the reference's name; `ItemDetails` covers the three `item` codes and `EmptyValueDetails` the fourth.
+- Requires `@blockchaincommons/provenance-mark` 1.0.0-beta.3.
+
+### Added
+
+- `examples/document.ts`: builds a document with a genesis mark, keys, a service and a delegate, signs it into an envelope, parses it back verified and advances the chain.
+- `tests/guards.test.ts`: every guard against eight plain values and a property over arbitrary non-instance values; `CborDate` at both date inputs; generator equality through an envelope round trip.
+- The frozen baseline for the differential is this package's 1.0.0-beta.2 with the `@blockchaincommons` siblings inlined, built by `scripts/build-baseline.ts`; the `@bcts/xid` closure is gone from the package.
+- Vectors for the removers, both next-mark forms (the caller's generator advanced in place, a stale one, another chain, no mark, the document's own generator in the way), `takeGenerator` on absent, clear, unlocked and locked generators, and a delegate whose source document keeps changing after the delegate was built; the harness replays them all against the reference. The panic-mapped class is gone with the hex adders: a reference panic is a MISMATCH.
+- `GeneratorData`, `TakenGenerator`, `ProvidedGeneratorOptions`, `EmptyValueDetails`.
+
+### Verification
+
+- Rust harness: 389 vectors - 362 match, 27 js-only (J3 23, J4 4), 0 unparsable, 0 MISMATCH.
+
 ## 1.0.0-beta.2 - 2026-09-16
 
 ### Changed (breaking)

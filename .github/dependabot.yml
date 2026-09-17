@@ -5,6 +5,7 @@ updates:
     schedule:
       interval: "weekly"
     labels: [ "dependencies" ]
+    reviewers: ["leonardocustodio"]
     groups:
       node:
         patterns:
@@ -13,6 +14,7 @@ updates:
   - package-ecosystem: github-actions
     directory: '/'
     labels: [ "gh-actions" ]
+    reviewers: ["leonardocustodio"]
     schedule:
       interval: weekly
     groups:

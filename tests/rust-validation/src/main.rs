@@ -7,14 +7,13 @@
 //! `throw:<code>[<inner code>]|<message>`: the reference's error variant,
 //! the variant it wraps for the four wrapping variants, and its `Display`.
 //! A row the reference cannot run because the input is JavaScript-only is
-//! `js-only` in a named class; a row where the reference panics at a call
-//! the port rejects with a typed error is `panic-mapped` when `PANIC_MAPPED`
-//! names the port's code; a recipe field this program cannot read exactly
-//! is `unparsable`. Anything else that differs is a MISMATCH. Unparsable
-//! rows and mismatches make the process exit 1.
+//! `js-only` in a named class; a recipe field this program cannot read
+//! exactly is `unparsable`. Anything else that differs, a reference panic
+//! included, is a MISMATCH. Unparsable rows and mismatches make the process
+//! exit 1.
 use bc_components::{
     EncapsulationPrivateKey, EncapsulationPublicKey, KeyDerivationMethod, PrivateKeyBase, PrivateKeys, PublicKeys,
-    Reference, ReferenceProvider, Salt, URI, XIDProvider, XID,
+    ReferenceProvider, Salt, URI, XIDProvider, XID,
 };
 use bc_envelope::prelude::*;
 #[allow(unused_imports)]
@@ -306,11 +305,13 @@ fn build(spec: &J) -> R<(XIDDocument, Vec<Delegate>)> {
     for k in arr(spec, "keys") { tri!(doc.add_key(make_key(k)?)); }
     let mut delegates = Vec::new();
     for ds in arr(spec, "delegates") {
-        let controller = match ds.get("doc") {
+        let mut controller = match ds.get("doc") {
             Some(d) => build(d)?.0,
             None => XIDDocument::from_xid(xid_of(&need!(s(ds, "xidSeed"), "xidSeed"))?),
         };
         let mut delegate = Delegate::new(&controller);
+        // The delegate owns a copy: the source document's later changes stay in the source.
+        for r in arr(ds, "laterResolution") { controller.add_resolution_method(uri(need!(r.as_str(), "laterResolution"))?); }
         permissions(&mut delegate, ds)?;
         tri!(doc.add_delegate(delegate.clone()));
         delegates.push(delegate);
@@ -430,6 +431,8 @@ fn doc_outputs(doc: &XIDDocument, out: &J) -> R<String> {
 }
 fn mutate(spec: &J, ops: &[J]) -> R<String> {
     let (mut doc, delegates) = build(spec)?;
+    // The caller's generators for the provided-generator form, one per genesis, advanced in place.
+    let mut provided: BTreeMap<String, ProvenanceMarkGenerator> = BTreeMap::new();
     let mut lines = Vec::new();
     for op in ops {
         let name = need!(op[0].as_str(), "op");
@@ -442,7 +445,20 @@ fn mutate(spec: &J, ops: &[J]) -> R<String> {
             "setNameForKey" => attempt(doc.set_name_for_key(&key_pub(spec, idx(1)?)?, need!(op[2].as_str(), "name")), |_| "ok".into()),
             "addKey" => match make_key(&op[1]) { Ok(k) => attempt(doc.add_key(k), |_| "ok".into()), Err(e) => e },
             "addResolution" => { doc.add_resolution_method(uri(need!(op[1].as_str(), "uri"))?); "ok".into() }
-            "removeResolution" => doc.remove_resolution_method(uri(need!(op[1].as_str(), "uri"))?).is_some().to_string(),
+            "removeResolution" => doc.remove_resolution_method(uri(need!(op[1].as_str(), "uri"))?).map(|u| u.to_string()).unwrap_or_else(|| "undefined".into()),
+            // The port edits the live key or service; here it is taken out, edited and put back.
+            "removeEndpoint" => match doc.take_key(&key_pub(spec, idx(1)?)?) {
+                None => "undefined".into(),
+                Some(mut k) => { let removed = k.endpoints_mut().remove(&uri(need!(op[2].as_str(), "uri"))?); tri!(doc.add_key(k)); removed.to_string() }
+            },
+            "removeKeyReference" => match doc.take_service(uri(need!(op[1].as_str(), "uri"))?) {
+                None => "undefined".into(),
+                Some(mut sv) => { let removed = sv.key_referenecs_mut().remove(&key_pub(spec, idx(2)?)?.reference()); tri!(doc.add_service(sv)); removed.to_string() }
+            },
+            "removeDelegateReference" => match doc.take_service(uri(need!(op[1].as_str(), "uri"))?) {
+                None => "undefined".into(),
+                Some(mut sv) => { let removed = sv.delegate_references_mut().remove(&delegate_at(2)?.reference()); tri!(doc.add_service(sv)); removed.to_string() }
+            },
             "addService" => match make_service(spec, &op[1], &delegates) { Ok(sv) => attempt(doc.add_service(sv), |_| "ok".into()), Err(e) => e },
             "removeService" => attempt(doc.remove_service(uri(need!(op[1].as_str(), "uri"))?), |_| "ok".into()),
             "takeService" => doc.take_service(uri(need!(op[1].as_str(), "uri"))?).map(|sv| sv.uri().to_string()).unwrap_or_else(|| "undefined".into()),
@@ -467,6 +483,24 @@ fn mutate(spec: &J, ops: &[J]) -> R<String> {
                 let d = match s(o, "date") { Some(x) => Some(date(&x)?), None => None };
                 attempt(doc.next_provenance_mark_with_embedded_generator(s(o, "password").map(|p| p.into_bytes()), d, s(o, "info").map(CBOR::from)), |_| "ok".into())
             }
+            "nextMarkProvided" => {
+                let o = &op[1];
+                let g = match o.get("genesis") { Some(g) => g.clone(), None => need!(spec.get("genesis"), "genesis").clone() };
+                let d = match s(o, "date") { Some(x) => Some(date(&x)?), None => None };
+                let info = s(o, "info").map(CBOR::from);
+                let fresh = o.get("fresh").and_then(|b| b.as_bool()).unwrap_or(false);
+                let mut fresh_generator = if fresh { Some(genesis_generator(&g)?.0) } else { None };
+                let generator = match fresh_generator.as_mut() {
+                    Some(gen) => gen,
+                    None => {
+                        let id = g.to_string();
+                        if !provided.contains_key(&id) { provided.insert(id.clone(), genesis_generator(&g)?.0); }
+                        provided.get_mut(&id).expect("just inserted")
+                    }
+                };
+                attempt(doc.next_provenance_mark_with_provided_generator(generator, d, info), |_| "ok".into())
+            }
+            "dropGenerator" => { let mark = doc.provenance().cloned(); doc.set_provenance(mark); "ok".into() }
             "clearProvenance" => { doc.set_provenance(None); "ok".into() }
             "clone" => { doc = doc.clone(); "ok".into() }
             other => return Err(format!("unparsable:op {other}")),
@@ -516,16 +550,28 @@ fn run(r: &J) -> R<String> {
             let provenance = Provenance::new_with_generator(generator, mark.clone());
             let env = provenance.clone().into_envelope_opt(gen_opt(r.get("gen"))?);
             let pw = s(r, "password").map(|p| p.into_bytes());
-            let back = tri!(Provenance::try_from_envelope(&env, pw.as_deref()));
+            let mut back = tri!(Provenance::try_from_envelope(&env, pw.as_deref()));
             let deterministic = matches!(r.get("gen"), Some(J::String(x)) if x == "omit");
-            Ok(render(&[
+            let mut rows = vec![
                 ("format", env.format()),
                 ("cbor", if deterministic { hex::encode(env.tagged_cbor_data()) } else { String::new() }),
                 ("mark", mark.ur_string()),
                 ("roundtrip", (provenance == back).to_string()),
                 ("generator", back.generator().map(|g| format!("nextSeq={}", g.next_seq())).unwrap_or_else(|| "-".into())),
                 ("encrypted", back.has_encrypted_generator().to_string()),
-            ]))
+            ];
+            if r.get("take").and_then(|b| b.as_bool()).unwrap_or(false) {
+                let salt_before = back.generator_salt().cloned();
+                let same = |salt: &Salt| if salt_before.as_ref() == Some(salt) { "same" } else { "differs" };
+                let taken = match back.take_generator() {
+                    None => "-".to_string(),
+                    Some((GeneratorData::Decrypted(g), salt)) => format!("decrypted nextSeq={} salt={}", g.next_seq(), same(&salt)),
+                    Some((GeneratorData::Encrypted(_), salt)) => format!("encrypted salt={}", same(&salt)),
+                };
+                rows.push(("taken", taken));
+                rows.push(("afterTake", format!("{},{}", back.has_generator(), back.has_encrypted_generator())));
+            }
+            Ok(render(&rows))
         }
         "privileges" => Ok(["All", "Auth", "Sign", "Encrypt", "Elide", "Issue", "Access", "Delegate", "Verify", "Update", "Transfer", "Elect", "Burn", "Revoke"]
             .iter()
@@ -627,8 +673,6 @@ fn run(r: &J) -> R<String> {
                     key.add_endpoint(uri(&v)?);
                     sorted(key.endpoints().iter().map(|u| u.to_string()).collect())
                 }
-                "keyRefHex" => { let mut sv = Service::new(uri("https://svc.example")?); tri!(sv.add_key_reference(Reference::from_hex(&v))); sv.key_references().len().to_string() }
-                "delegateRefHex" => { let mut sv = Service::new(uri("https://svc.example")?); tri!(sv.add_delegate_reference(Reference::from_hex(&v))); sv.delegate_references().len().to_string() }
                 other => return Err(format!("unparsable:construct op {other}")),
             })
         }
@@ -638,23 +682,9 @@ fn run(r: &J) -> R<String> {
 }
 
 // ---------------------------------------------------------------------------
-// Panics the port rejects with a typed error, by (recipe kind, panic text, port code)
+// Running one row: a panic or a hang in the reference is a MISMATCH
 // ---------------------------------------------------------------------------
 
-const PANIC_MAPPED: &[(&str, &str, &str)] = &[
-    // `Reference::from_hex` unwraps the hex decode and the size check; the port throws `Hex` / `InvalidSize`.
-    ("construct", "InvalidHexCharacter", "Hex"),
-    ("construct", "OddLength", "Hex"),
-    ("construct", "InvalidSize", "InvalidSize"),
-];
-fn panic_mapped(kind: &str, text: &str) -> Option<&'static str> {
-    PANIC_MAPPED.iter().find(|(k, needle, _)| *k == kind && text.contains(needle)).map(|(_, _, code)| *code)
-}
-/// The port's code in a `throw:<code>[<inner>]|<message>` outcome.
-fn ts_code(want: &str) -> Option<&str> {
-    let rest = want.strip_prefix("throw:")?;
-    Some(rest.split(|c| c == '[' || c == '|').next().unwrap_or(rest))
-}
 fn payload(p: Box<dyn std::any::Any + Send>) -> String {
     if let Some(s) = p.downcast_ref::<&str>() { return s.to_string(); }
     if let Some(s) = p.downcast_ref::<String>() { return s.clone(); }
@@ -687,14 +717,13 @@ fn main() {
     assert_eq!(file.count, file.vectors.len(), "the file's count must equal its vectors");
     std::panic::set_hook(Box::new(|_| {}));
 
-    let (mut ok, mut mapped, mut js_only, mut mismatch, mut unparsable) = (0usize, 0usize, 0usize, 0usize, 0usize);
+    let (mut ok, mut js_only, mut mismatch, mut unparsable) = (0usize, 0usize, 0usize, 0usize);
     let mut js_by: BTreeMap<String, usize> = Default::default();
     let mut dump: BTreeMap<String, String> = Default::default();
     let cut = |x: &str| if verbose { x.to_string() } else { x.chars().take(200).collect::<String>() };
     let report_mismatch = |name: &str, detail: String| eprintln!("MISMATCH {name}\n  {detail}");
 
     for v in &file.vectors {
-        let kind = s(&v.recipe, "k").unwrap_or_default();
         let want = v.expect.as_str();
         match run_guarded(v, Duration::from_secs(300)) {
             Got::Value(got) => {
@@ -707,18 +736,14 @@ fn main() {
                 mismatch += 1;
                 report_mismatch(&v.name, format!("[line {line}/{}]\n  rust: {}\n  ts:   {}", w.len(), cut(g.get(line).unwrap_or(&"")), cut(w.get(line).unwrap_or(&""))));
             }
-            Got::Panic(text) => match panic_mapped(&kind, &text) {
-                Some(code) if ts_code(want) == Some(code) => mapped += 1,
-                Some(code) => { mismatch += 1; report_mismatch(&v.name, format!("reference panicked ({}) mapped to {code}\n  ts: {}", cut(&text), cut(want))) }
-                None => { mismatch += 1; report_mismatch(&v.name, format!("unhandled reference panic: {}\n  ts: {}", cut(&text), cut(want))) }
-            },
+            Got::Panic(text) => { mismatch += 1; report_mismatch(&v.name, format!("reference panicked: {}\n  ts: {}", cut(&text), cut(want))) }
             Got::Hang => { mismatch += 1; report_mismatch(&v.name, format!("reference did not return within 300s\n  ts: {}", cut(want))) }
         }
     }
     if let Ok(path) = std::env::var("DUMP") { std::fs::write(path, serde_json::to_string_pretty(&dump).unwrap()).unwrap(); }
     let js_detail: Vec<String> = js_by.iter().map(|(k, n)| format!("{k} {n}")).collect();
     println!(
-        "{} vectors - {ok} match, {mapped} panic-mapped, {js_only} js-only ({}), {unparsable} unparsable, {mismatch} MISMATCH",
+        "{} vectors - {ok} match, {js_only} js-only ({}), {unparsable} unparsable, {mismatch} MISMATCH",
         file.vectors.len(), js_detail.join(", ")
     );
     std::process::exit(if mismatch == 0 && unparsable == 0 { 0 } else { 1 });

@@ -25,7 +25,7 @@ export interface XIDDocumentLike {
 }
 
 /** Parses a controller document from its envelope: `XIDDocument.fromEnvelope`. */
-export type ParseXIDDocument = (envelope: Envelope) => XIDDocumentLike;
+type ParseXIDDocument = (envelope: Envelope) => XIDDocumentLike;
 
 /** What `Delegate.from` takes besides the controller. */
 export interface DelegateInput {
@@ -33,17 +33,11 @@ export interface DelegateInput {
   permissions?: Permissions | undefined;
 }
 
-/** What `Delegate.fromEnvelope` takes besides the envelope. */
-export interface DelegateParseOptions {
-  /** The parser of the controller's envelope; `XIDDocument.fromEnvelope` unless given. */
-  parseDocument?: ParseXIDDocument | undefined;
-}
+let documentParser: ParseXIDDocument | undefined;
 
-let defaultParser: ParseXIDDocument | undefined;
-
-/** Installs the default controller parser (`XIDDocument.fromEnvelope`), late-bound to avoid an import cycle. */
+/** Installs the controller parser (`XIDDocument.fromEnvelope`), late-bound to avoid an import cycle. @internal */
 export function setDefaultDocumentParser(parser: ParseXIDDocument): void {
-  defaultParser = parser;
+  documentParser = parser;
 }
 
 /** A delegate: a controller document and the permissions this document grants it. */
@@ -56,12 +50,16 @@ export class Delegate implements HasPermissions {
     this._permissions = permissions;
   }
 
-  /** A delegate controlled by `controller`, with no permissions unless given. */
+  /**
+   * A delegate controlled by a copy of `controller` taken now (as the
+   * reference's `Delegate::new` clones it): a later change to the
+   * caller's document is not seen. No permissions unless given.
+   */
   static from(controller: XIDDocumentLike, { permissions }: DelegateInput = {}): Delegate {
-    return new Delegate(controller, permissions ?? Permissions.from());
+    return new Delegate(controller.clone(), permissions ?? Permissions.from());
   }
 
-  /** The controlling document (live: mutating it mutates the delegate). */
+  /** The delegate's own copy of the controlling document (live: mutating it mutates the delegate). */
   get controller(): XIDDocumentLike {
     return this._controller;
   }
@@ -76,19 +74,44 @@ export class Delegate implements HasPermissions {
     return this.xid.reference();
   }
 
-  /** The permissions granted (live). */
+  /** The permissions (live). */
   get permissions(): Permissions {
     return this._permissions;
   }
 
+  /** The allowed privileges (a copy). */
+  get allow(): ReadonlySet<Privilege> {
+    return this._permissions.allow;
+  }
+
+  /** The denied privileges (a copy). */
+  get deny(): ReadonlySet<Privilege> {
+    return this._permissions.deny;
+  }
+
   /** Allows `privilege`. */
-  allow(privilege: Privilege): void {
+  addAllow(privilege: Privilege): void {
     this._permissions.addAllow(privilege);
   }
 
   /** Denies `privilege`. */
-  deny(privilege: Privilege): void {
+  addDeny(privilege: Privilege): void {
     this._permissions.addDeny(privilege);
+  }
+
+  /** Stops allowing `privilege`. */
+  removeAllow(privilege: Privilege): void {
+    this._permissions.removeAllow(privilege);
+  }
+
+  /** Stops denying `privilege`. */
+  removeDeny(privilege: Privilege): void {
+    this._permissions.removeDeny(privilege);
+  }
+
+  /** Empties both sets. */
+  clearAllPermissions(): void {
+    this._permissions.clearAllPermissions();
   }
 
   /** The controller's envelope, wrapped, with the permissions. */
@@ -98,15 +121,14 @@ export class Delegate implements HasPermissions {
 
   /**
    * A delegate from its envelope: the permissions, then the unwrapped
-   * controller parsed by `parseDocument` (`XIDDocument.fromEnvelope`
-   * unless given). A sibling failure is `EnvelopeParsing`.
+   * controller parsed with `XIDDocument.fromEnvelope`. A sibling failure
+   * is `EnvelopeParsing`.
    */
-  static fromEnvelope(envelope: Envelope, { parseDocument }: DelegateParseOptions = {}): Delegate {
-    const parse = parseDocument ?? defaultParser;
-    if (parse === undefined) throw new TypeError("parseDocument is required");
+  static fromEnvelope(envelope: Envelope): Delegate {
+    if (documentParser === undefined) throw new Error("the document module is not loaded");
     const permissions = Permissions.fromEnvelope(envelope);
     const inner = guarded(() => envelope.unwrap());
-    return new Delegate(parse(inner), permissions);
+    return new Delegate(documentParser(inner), permissions);
   }
 
   /** Same controller document and permissions — as the reference's equality. */

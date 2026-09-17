@@ -255,7 +255,6 @@ describe("XID Document Test Vectors", () => {
   });
 
   describe("Service with References", () => {
-    // Fixed: service reference consistency check now works correctly
     it("should create service with key and delegate references", () => {
       const [aliceBase, bobBase] = makeFakePrivateKeyBases(2);
 
@@ -685,11 +684,10 @@ describe("XID Known Test Vector (Rust Parity)", () => {
   });
 });
 
-describe("XID Document Cross-Impl Vectors (X1)", () => {
-  // X1 — Byte-level cross-impl parity for XIDDocument.
+describe("XID Document Cross-Impl Vectors", () => {
+  // Byte-level cross-impl parity for XIDDocument.
   //
-  // Sources:
-  //   - bc-xid-rust/tests/test_xid_document.rs::xid_document (lines 19-110)
+  // Source: bc-xid-rust/tests/test_xid_document.rs::xid_document.
   //
   // **Why this works byte-identically**:
   //   - `bc_rand::make_fake_random_number_generator` is a deterministic
@@ -705,12 +703,10 @@ describe("XID Document Cross-Impl Vectors (X1)", () => {
   // **Verifies**:
   //   1. The deterministic XID hex matches Rust byte-for-byte.
   //   2. The format(envelope) output matches the Rust expected format
-  //      string. This is the same bug-class G1 surfaced for GSTP —
-  //      round-trip digest checks pass even when the encode produces a
-  //      non-Rust shape; only an explicit format() pin catches
-  //      encoder-path / summarizer regressions.
+  //      string: round-trip digest checks pass even when the encode
+  //      produces a non-Rust shape, so only an explicit format() pin
+  //      catches encoder-path or summariser regressions.
 
-  // From bc-xid-rust/tests/test_xid_document.rs:36-43.
   const RUST_XID_DOCUMENT_FORMAT = [
     "XID(71274df1) [",
     "    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [",
@@ -719,10 +715,9 @@ describe("XID Document Cross-Impl Vectors (X1)", () => {
     "]",
   ].join("\n");
 
-  // From bc-xid-rust/tests/test_xid_document.rs:64.
   const RUST_XID_HEX = "71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c";
 
-  it("produces XID with byte-identical hex to Rust (X1-1)", () => {
+  it("produces XID with byte-identical hex to Rust", () => {
     const rng = SeededRng.forTesting();
     const privateKeyBase = PrivateKeyBase.random({ rng: rng });
     const publicKeys = privateKeyBase.schnorrPublicKeys();
@@ -732,7 +727,7 @@ describe("XID Document Cross-Impl Vectors (X1)", () => {
     expect(doc.xid.shortDescription()).toBe("71274df1");
   });
 
-  it("matches the Rust format(envelope) string (X1-2)", () => {
+  it("matches the Rust format(envelope) string", () => {
     const rng = SeededRng.forTesting();
     const privateKeyBase = PrivateKeyBase.random({ rng: rng });
     const publicKeys = privateKeyBase.schnorrPublicKeys();
@@ -741,14 +736,14 @@ describe("XID Document Cross-Impl Vectors (X1)", () => {
     expect(format(doc.toEnvelope())).toBe(RUST_XID_DOCUMENT_FORMAT);
   });
 
-  it("produces a byte-identical `ur:xid/...` string to Rust (X1-3 / X1d)", () => {
-    // From bc-xid-rust/tests/test_xid_document.rs:51-55:
+  it("produces a byte-identical `ur:xid/...` string to Rust", () => {
+    // From bc-xid-rust/tests/test_xid_document.rs:
     //   let xid_document_ur = xid_document.ur_string();
     //   assert_eq!(xid_document_ur, "ur:xid/...");
     //
-    // X1d (resolved 2026-04-25): TS `XIDDocument` now mirrors Rust's
-    // `CBORTagged` impl with TAG_XID/40024 and produces `ur:xid/...`
-    // via its own `urString()`. Body bytes follow Rust:
+    // `XIDDocument` mirrors Rust's `CBORTagged` impl with TAG_XID/40024
+    // and produces `ur:xid/...` via its own `urString()`. Body bytes
+    // follow Rust:
     //   - empty doc:  bytes(32)                   — raw XID bytes
     //   - non-empty:  200(envelope_untagged)      — tag-200 envelope
     const RUST_XID_DOCUMENT_UR =
@@ -768,8 +763,8 @@ describe("XID Document Cross-Impl Vectors (X1)", () => {
     expect(doc.equals(doc2)).toBe(true);
   });
 
-  it("empty XIDDocument UR uses raw 32-byte body, matching Rust (X1d)", () => {
-    // From bc-xid-rust/tests/test_xid_document.rs:104-107:
+  it("empty XIDDocument UR uses raw 32-byte body, matching Rust", () => {
+    // From bc-xid-rust/tests/test_xid_document.rs:
     //   let xid_ur = xid.ur_string();
     //   assert_eq!(xid_ur, "ur:xid/hdcxjsdigtwneocmnybadp...");
     //

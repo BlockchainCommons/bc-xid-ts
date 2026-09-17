@@ -24,15 +24,33 @@ import {
   kdfOf,
   passwordBytes,
 } from "./key";
-import { extractObjectForPredicate, guarded, leafAs } from "./domain";
+import { expectInstance, extractObjectForPredicate, guarded, leafAs } from "./domain";
 
 /** How the generator goes into an envelope; the same four forms as private keys. */
 export type XIDGeneratorOptions = "omit" | "include" | "elide" | EncryptOptions;
 
 /** The generator as held: in the clear, or the locked envelope as parsed. */
-type GeneratorData =
-  | { type: "decrypted"; generator: ProvenanceMarkGenerator }
-  | { type: "encrypted"; envelope: Envelope };
+export type GeneratorData =
+  | {
+      /** Held in the clear. */
+      type: "decrypted";
+      /** The generator. */
+      generator: ProvenanceMarkGenerator;
+    }
+  | {
+      /** Held locked (parsed without the password). */
+      type: "encrypted";
+      /** The locked envelope. */
+      envelope: Envelope;
+    };
+
+/** What `takeGenerator` hands back: the generator as held and its salt. */
+export interface TakenGenerator {
+  /** The generator as held. */
+  readonly data: GeneratorData;
+  /** The salt the `'provenanceGenerator'` assertion carried. */
+  readonly salt: Salt;
+}
 
 /** What `Provenance.from` takes besides the mark. */
 export interface ProvenanceInput {
@@ -59,10 +77,16 @@ export class Provenance {
   /** A mark, with the generator that produced it when the document should keep it. */
   static from(mark: ProvenanceMark, { generator }: ProvenanceInput = {}): Provenance {
     return new Provenance(
-      mark,
+      expectInstance(mark, ProvenanceMark, "mark"),
       generator === undefined
         ? undefined
-        : { data: { type: "decrypted", generator }, salt: Salt.random({ length: 32 }) },
+        : {
+            data: {
+              type: "decrypted",
+              generator: expectInstance(generator, ProvenanceMarkGenerator, "generator"),
+            },
+            salt: Salt.random({ length: 32 }),
+          },
     );
   }
 
@@ -93,19 +117,23 @@ export class Provenance {
 
   /** Replaces the mark (no chain check, as the reference's `set_mark`). */
   setMark(mark: ProvenanceMark): void {
-    this._mark = mark;
+    this._mark = expectInstance(mark, ProvenanceMark, "mark");
   }
 
   /** Sets or replaces the generator, with a fresh salt. */
   setGenerator(generator: ProvenanceMarkGenerator): void {
+    expectInstance(generator, ProvenanceMarkGenerator, "generator");
     this._generator = { data: { type: "decrypted", generator }, salt: Salt.random({ length: 32 }) };
   }
 
-  /** Removes the generator, returning whether one was held. */
-  takeGenerator(): boolean {
-    const had = this._generator !== undefined;
+  /**
+   * Removes and returns the generator as held (in the clear or the locked
+   * envelope) with its salt; `undefined` when there is none.
+   */
+  takeGenerator(): TakenGenerator | undefined {
+    const taken = this._generator;
     this._generator = undefined;
-    return had;
+    return taken;
   }
 
   /**
@@ -232,15 +260,14 @@ export class Provenance {
 
   /** Same mark and generator (in the clear or locked, with its salt) — as the reference's equality. */
   equals(other: Provenance): boolean {
+    expectInstance(other, Provenance, "other");
     if (!this._mark.equals(other._mark)) return false;
     const a = this._generator;
     const b = other._generator;
     if (a === undefined || b === undefined) return a === b;
     if (!a.salt.equals(b.salt)) return false;
     if (a.data.type === "decrypted" && b.data.type === "decrypted") {
-      return (
-        JSON.stringify(a.data.generator.toJSON()) === JSON.stringify(b.data.generator.toJSON())
-      );
+      return a.data.generator.equals(b.data.generator);
     }
     if (a.data.type === "encrypted" && b.data.type === "encrypted") {
       return envelopeBytesEqual(a.data.envelope, b.data.envelope);

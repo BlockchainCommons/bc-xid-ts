@@ -1,5 +1,5 @@
 {
- "count": 371,
+ "count": 389,
  "vectors": [
   {
    "name": "doc publicKeys:7eb559bb/schnorr [omit/omit/none]",
@@ -4149,6 +4149,67 @@
    "expect": "format=ProvenanceMark(f0bbfdec4493972b1bf084f84660bbcb884b227ff98b600bf1537b2771cbf609) [\n    {\n        'provenanceGenerator': ENCRYPTED [\n            'hasSecret': EncryptedKey(Argon2id)\n        ]\n    } [\n        'salt': Salt\n    ]\n]\ncbor=\nmark=ur:provenance/lfaegdmeftmtrhvwqzsafrisdrlerfhfgdsbfxghparhws\nroundtrip=false\ngenerator=-\nencrypted=true"
   },
   {
+   "name": "provenance low \"take\" [omit] take",
+   "recipe": {
+    "k": "provenance",
+    "genesis": {
+     "passphrase": "take",
+     "res": "low",
+     "date": "2025-01-01T00:00:00Z"
+    },
+    "gen": "omit",
+    "take": true
+   },
+   "expect": "format=ProvenanceMark(caf7f0753dddef99f94bdbf6b4fcdf0fabb4ebce86d2200e25ef45a2f68eab8e)\ncbor=d8c8d8c9da50524f56820050351cf740efb3128ae968a8f90a17d6b3\nmark=ur:provenance/lfaegdecceylfzwsqdbglewlispdytbkchtbqdbabdecmu\nroundtrip=false\ngenerator=-\nencrypted=false\ntaken=-\nafterTake=false,false"
+  },
+  {
+   "name": "provenance low \"take\" [include] take",
+   "recipe": {
+    "k": "provenance",
+    "genesis": {
+     "passphrase": "take",
+     "res": "low",
+     "date": "2025-01-01T00:00:00Z"
+    },
+    "gen": "include",
+    "take": true
+   },
+   "expect": "format=ProvenanceMark(caf7f0753dddef99f94bdbf6b4fcdf0fabb4ebce86d2200e25ef45a2f68eab8e) [\n    {\n        'provenanceGenerator': Bytes(4) [\n            'isA': \"provenance-generator\"\n            \"next-seq\": 1\n            \"res\": 0\n            \"rng-state\": Bytes(32)\n            \"seed\": Bytes(32)\n        ]\n    } [\n        'salt': Salt\n    ]\n]\ncbor=\nmark=ur:provenance/lfaegdecceylfzwsqdbglewlispdytbkchtbqdbabdecmu\nroundtrip=true\ngenerator=nextSeq=1\nencrypted=false\ntaken=decrypted nextSeq=1 salt=same\nafterTake=false,false"
+  },
+  {
+   "name": "provenance low \"take\" [encrypt(pw)] pw take",
+   "recipe": {
+    "k": "provenance",
+    "genesis": {
+     "passphrase": "take",
+     "res": "low",
+     "date": "2025-01-01T00:00:00Z"
+    },
+    "gen": {
+     "encrypt": "pw"
+    },
+    "password": "pw",
+    "take": true
+   },
+   "expect": "format=ProvenanceMark(caf7f0753dddef99f94bdbf6b4fcdf0fabb4ebce86d2200e25ef45a2f68eab8e) [\n    {\n        'provenanceGenerator': ENCRYPTED [\n            'hasSecret': EncryptedKey(Argon2id)\n        ]\n    } [\n        'salt': Salt\n    ]\n]\ncbor=\nmark=ur:provenance/lfaegdecceylfzwsqdbglewlispdytbkchtbqdbabdecmu\nroundtrip=true\ngenerator=nextSeq=1\nencrypted=false\ntaken=decrypted nextSeq=1 salt=same\nafterTake=false,false"
+  },
+  {
+   "name": "provenance low \"take\" [encrypt(pw)] take",
+   "recipe": {
+    "k": "provenance",
+    "genesis": {
+     "passphrase": "take",
+     "res": "low",
+     "date": "2025-01-01T00:00:00Z"
+    },
+    "gen": {
+     "encrypt": "pw"
+    },
+    "take": true
+   },
+   "expect": "format=ProvenanceMark(caf7f0753dddef99f94bdbf6b4fcdf0fabb4ebce86d2200e25ef45a2f68eab8e) [\n    {\n        'provenanceGenerator': ENCRYPTED [\n            'hasSecret': EncryptedKey(Argon2id)\n        ]\n    } [\n        'salt': Salt\n    ]\n]\ncbor=\nmark=ur:provenance/lfaegdecceylfzwsqdbglewlispdytbkchtbqdbabdecmu\nroundtrip=false\ngenerator=-\nencrypted=true\ntaken=encrypted salt=same\nafterTake=false,false"
+  },
+  {
    "name": "doc privateKeyBase:7eb559bb delegates×2 services×2 [omit/omit/none]",
    "recipe": {
     "k": "doc",
@@ -4221,6 +4282,61 @@
     }
    },
    "expect": "format=XID(71274df1) [\n    'delegate': {\n        XID(71274df1) [\n            'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n                'allow': 'All'\n            ]\n        ]\n    } [\n        'deny': 'Elect'\n    ]\n    'delegate': {\n        XID(8ba3695a) [\n            'dereferenceVia': URI(https://bob.example)\n            'key': PublicKeys(149d6b64, SigningPublicKey(640f4194, Ed25519PublicKey(72a83fab)), EncapsulationPublicKey(a43140fd, X25519PublicKey(a43140fd))) [\n                'allow': 'Sign'\n            ]\n            'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [\n                'allow': 'All'\n            ]\n        ]\n    } [\n        'allow': 'All'\n    ]\n    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n        'allow': 'All'\n    ]\n    'service': URI(https://a.example) [\n        'allow': 'Access'\n        'delegate': Reference(71274df1)\n        'delegate': Reference(8ba3695a)\n    ]\n    'service': URI(https://b.example) [\n        'allow': 'Sign'\n        'capability': \"cap\"\n        'deny': 'Burn'\n        'key': Reference(eb9b1cae)\n        'name': \"B\"\n    ]\n]\ncbor=d8c886d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca1183f82d8c884d8c9d99c5858208ba3695a43e026ed77ad1393aadfbb7fe78b0620f95ea3e127562b331dd9e567a10882d8c9d99c5182d99c56820258204c8b6f7084dc5e0d4c513af570d7bd28398843dde4974eccf7f4bce23b08ef2ed99c4b5820d8dbce5e0eb98aae8b50b1ec66a0355ecf473957798237643a3c5702d37a9f6ea1183c1848a109d8c9d8207368747470733a2f2f626f622e6578616d706c65a10882d8c9d99c5182d99c568202582074a920098ef157e49ea99fab7b7979397af1b5a0319fbfa85b3c5fcbb5eeadcdd99c4b582099e664cf473fa0a2f597cd32d86b772affcae1ef0bc5f1b953f4dc6bf0493f45a1183c1846a1183c1846a1183f82d8c882d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846a1183d1854a1184284d8c9d8207168747470733a2f2f612e6578616d706c65a1183fd8c9d99c59582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca1183fd8c9d99c5958208ba3695a43e026ed77ad1393aadfbb7fe78b0620f95ea3e127562b331dd9e567a1183c184ca10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846a1184286d8c9d8207168747470733a2f2f622e6578616d706c65a11843d8c963636170a10bd8c96142a1183d1855a108d8c9d99c595820eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8a1183c1848\nur=ur:envelope/lntpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoycsfhlftpsplrtpsotanshdhdcxluotinhtfxvtdswektpmbwmupkurrklbvdluamcxythyotvydihfdneocatavwiooyaylftpsotansgylftanshflfaohdcxgslujljolruohybtgsgyftykjotsrydeeslofxutvemsglsfylwkrfvofraywsdmtansgrhdcxtpuytohybarhlepllugdpawpiynbechytkfleshgkklfemieftfnhgaoteknnejtoycsfncsfdoyastpsotpcxjkisjyjyjojkftdldlidjliddmihkshsjnjojzihoyaylftpsotansgylftanshflfaohdcxjyptcxasmnwnhgvennptnepykgkkkkesknwnrenbehnerspdhpfnhesbrewypmsntansgrhdcxnlvaietkflfhnboeykmssneytpjektdrzmsgvywsbdskwnrhguwkuojewtgafhfeoycsfncsfgoycsfncsfgoycsfhlftpsplftpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgoycsfscsghoycsfwlrtpsotpcxjsisjyjyjojkftdldlhsdmihkshsjnjojzihoycsfhtpsotanshkhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoycsfhtpsotanshkhdcxluotinhtfxvtdswektpmbwmupkurrklbvdluamcxythyotvydihfdneocatavwiooycsfncsgsoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgoycsfwlntpsotpcxjsisjyjyjojkftdldliddmihkshsjnjojzihoycsfxtpsoiaiahsjooybdtpsohsfwoycsfscsgooyaytpsotanshkhdcxwmndcepljtprfrvwtawpidbsrybkcmwpbwkphfgtfdieaywmtdfzzokoostkmkspoycsfncsfdmnndjzsn\ndigest=7b9b20aefbb141987156cf04184ac9c45a0b0ae2b062a1436f378300cd07ee4c\nxid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c\nreference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c\nisEmpty=false\nkeys=1\ninception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8 private\nresolution=\nservices=https://a.example,https://b.example\ndelegates=71274df1,8ba3695a\nattachments=0\nedges=0\nprovenance=-\ngenerator=-\nroundtrip=throw:UnexpectedPredicate|unexpected predicate: 61\nverify=throw:EnvelopeNotSigned|envelope is not signed"
+  },
+  {
+   "name": "doc privateKeyBase:7eb559bb res×1 delegates×2 later [omit/omit/none]",
+   "recipe": {
+    "k": "doc",
+    "doc": {
+     "inception": {
+      "kind": "privateKeyBase",
+      "seed": "7eb559bbbf6cce2632cf9f194aeb50943de7e1cbad54dcfab27a42759f5e2fed"
+     },
+     "resolution": [
+      "https://alice.example"
+     ],
+     "delegates": [
+      {
+       "doc": {
+        "inception": {
+         "kind": "publicKeys",
+         "seed": "518684c556472008a67932f7c682125b50cb72e8216f6906358fdaf28d354553"
+        }
+       },
+       "allow": [
+        "Sign"
+       ],
+       "laterResolution": [
+        "https://later.example"
+       ]
+      },
+      {
+       "doc": {
+        "inception": {
+         "kind": "publicKeys",
+         "seed": "0000000000000000000000000000000000000000000000000000000000000001"
+        },
+        "keys": [
+         {
+          "seed": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "allow": [
+           "Sign"
+          ]
+         }
+        ],
+        "resolution": [
+         "https://bob.example"
+        ]
+       },
+       "laterResolution": [
+        "https://later.example",
+        "btcr:later"
+       ]
+      }
+     ]
+    }
+   },
+   "expect": "format=XID(71274df1) [\n    'delegate': {\n        XID(48f7e2df) [\n            'dereferenceVia': URI(https://bob.example)\n            'key': PublicKeys(149d6b64, SigningPublicKey(640f4194, Ed25519PublicKey(72a83fab)), EncapsulationPublicKey(a43140fd, X25519PublicKey(a43140fd))) [\n                'allow': 'Sign'\n            ]\n            'key': PublicKeys(22355237, SigningPublicKey(48f7e2df, Ed25519PublicKey(2c3d976b)), EncapsulationPublicKey(36a0b431, X25519PublicKey(36a0b431))) [\n                'allow': 'All'\n            ]\n        ]\n    }\n    'delegate': {\n        XID(8ba3695a) [\n            'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [\n                'allow': 'All'\n            ]\n        ]\n    } [\n        'allow': 'Sign'\n    ]\n    'dereferenceVia': URI(https://alice.example)\n    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n        'allow': 'All'\n    ]\n]\ncbor=d8c885d8c9d99c58582071274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93ca109d8c9d8207568747470733a2f2f616c6963652e6578616d706c65a10882d8c9d99c5182d99c565820618c40370884f0d49c2f54bd2d9540e74e9b886a045e76b54829cadc52e305b4d99c4b5820388af2e3ee48ce10f962a70e98c60294f3f80e78c27b4a51173991bb1dd37520a1183c1846a1183f82d8c882d8c9d99c5858208ba3695a43e026ed77ad1393aadfbb7fe78b0620f95ea3e127562b331dd9e567a10882d8c9d99c5182d99c568202582074a920098ef157e49ea99fab7b7979397af1b5a0319fbfa85b3c5fcbb5eeadcdd99c4b582099e664cf473fa0a2f597cd32d86b772affcae1ef0bc5f1b953f4dc6bf0493f45a1183c1846a1183c1848a1183fd8c884d8c9d99c58582048f7e2df6f33bf65c20199faef908aed4ed87019fbe0f8aceb1e6a8e70d3f9baa10882d8c9d99c5182d99c568202582054923f0f8d3018918cf55c856e959bb188c495f635b826edcd6fd5b01a7ac01bd99c4b5820ed60d0ef91fbee094ee0bda9b81bac7f34bfab0d4209c1ced4899834b69af02da1183c1846a10882d8c9d99c5182d99c56820258204c8b6f7084dc5e0d4c513af570d7bd28398843dde4974eccf7f4bce23b08ef2ed99c4b5820d8dbce5e0eb98aae8b50b1ec66a0355ecf473957798237643a3c5702d37a9f6ea1183c1848a109d8c9d8207368747470733a2f2f626f622e6578616d706c65\nur=ur:envelope/lptpsotanshdhdcxjsdigtwneocmnybadpdlzobysbstmekteypspeotcfldynlpsfolsbintyjkrhfnoyastpsotpcxkpisjyjyjojkftdldlhsjziniaihdmihkshsjnjojzihoyaylftpsotansgylftanshfhdcxhslkfzemaylrwttynsdlghrydpmdfzvdglndloimaahykorefddtsguogmvlahqztansgrhdcxetlewzvlwyfdtobeytidosbamkswaomwwfyabakssakggegychesmerkcatekpcxoycsfncsfgoycsfhlftpsplftpsotanshdhdcxluotinhtfxvtdswektpmbwmupkurrklbvdluamcxythyotvydihfdneocatavwiooyaylftpsotansgylftanshflfaohdcxjyptcxasmnwnhgvennptnepykgkkkkesknwnrenbehnerspdhpfnhesbrewypmsntansgrhdcxnlvaietkflfhnboeykmssneytpjektdrzmsgvywsbdskwnrhguwkuojewtgafhfeoycsfncsfgoycsfncsfdoycsfhtpsplrtpsotanshdhdcxfdylvourjleorsihsaadnlzswsmhlewegltpjocfzovtyapswmckimmnjoteytrdoyaylftpsotansgylftanshflfaohdcxghmofhbslgdycsmelkykhhlpjtmdndpalossmdynecrodswesnjltlpfcyknrtcwtansgrhdcxwehntiwsmezowyasglvtryptrocwpslbeerspybtfwassetotyldmkeerpnywtdpoycsfncsfgoyaylftpsotansgylftanshflfaohdcxgslujljolruohybtgsgyftykjotsrydeeslofxutvemsglsfylwkrfvofraywsdmtansgrhdcxtpuytohybarhlepllugdpawpiynbechytkfleshgkklfemieftfnhgaoteknnejtoycsfncsfdoyastpsotpcxjkisjyjyjojkftdldlidjliddmihkshsjnjojzihsbpfpdsk\ndigest=e16f5d346ff333c35e06ebcb6c1abd75b5500aa84138896c7a2f0cfc4f7b86d7\nxid=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c\nreference=71274df133169a0e2d2ffb11cbc7917732acafa31989f685cca6cb69d473b93c\nisEmpty=false\nkeys=1\ninception=eb9b1cae6eb23be5d9ec620fbd0a16ec1375564d486408ebd240fb76a7cf98c8 private\nresolution=https://alice.example\nservices=\ndelegates=48f7e2df,8ba3695a\nattachments=0\nedges=0\nprovenance=-\ngenerator=-\nroundtrip=false\nverify=throw:EnvelopeNotSigned|envelope is not signed"
   },
   {
    "name": "decode none ur:envelope/lftpsotanshdhdcxjsdigtwneocm",
@@ -4842,7 +4958,7 @@
      ]
     ]
    },
-   "expect": "addResolution=ok\nremoveResolution=true\nremoveResolution=false\naddResolution=ok\n===\nXID(71274df1) [\n    'dereferenceVia': URI(btcr:1)\n    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n        'allow': 'All'\n    ]\n]"
+   "expect": "addResolution=ok\nremoveResolution=https://r.example\nremoveResolution=undefined\naddResolution=ok\n===\nXID(71274df1) [\n    'dereferenceVia': URI(btcr:1)\n    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n        'allow': 'All'\n    ]\n]"
   },
   {
    "name": "mutate privateKeyBase:7eb559bb attachments×2 edges×1: removeAttachment,removeAttachment,removeEdge,clearAttachments,clearEdges",
@@ -4990,6 +5106,261 @@
     ]
    },
    "expect": "clone=ok\nnextMark=ok\n===\nXID(71274df1) [\n    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n        'allow': 'All'\n    ]\n    'provenance': ProvenanceMark(2c4ca5f83803166663f9f8cedacc1946b570632324b377f9be8bdfba3fae9f21)\n]"
+  },
+  {
+   "name": "mutate privateKeyBase:7eb559bb genesis(low \"Wolf\" 2025-01-01T00:00:00Z): nextMarkProvided,dropGenerator,nextMarkProvided,nextMarkProvided,nextMark,nextMarkProvided(fresh),nextMarkProvided",
+   "recipe": {
+    "k": "mutate",
+    "doc": {
+     "inception": {
+      "kind": "privateKeyBase",
+      "seed": "7eb559bbbf6cce2632cf9f194aeb50943de7e1cbad54dcfab27a42759f5e2fed"
+     },
+     "genesis": {
+      "passphrase": "Wolf",
+      "res": "low",
+      "date": "2025-01-01T00:00:00Z"
+     }
+    },
+    "ops": [
+     [
+      "nextMarkProvided",
+      {
+       "date": "2025-01-02T00:00:00Z"
+      }
+     ],
+     [
+      "dropGenerator"
+     ],
+     [
+      "nextMarkProvided",
+      {
+       "date": "2025-01-02T00:00:00Z"
+      }
+     ],
+     [
+      "nextMarkProvided",
+      {
+       "date": "2025-01-03T00:00:00Z",
+       "info": "third"
+      }
+     ],
+     [
+      "nextMark",
+      {
+       "date": "2025-01-04T00:00:00Z"
+      }
+     ],
+     [
+      "nextMarkProvided",
+      {
+       "date": "2025-01-04T00:00:00Z",
+       "fresh": true
+      }
+     ],
+     [
+      "nextMarkProvided",
+      {
+       "date": "2025-01-04T00:00:00Z",
+       "genesis": {
+        "passphrase": "Other",
+        "res": "low",
+        "date": "2025-01-01T00:00:00Z"
+       }
+      }
+     ]
+    ]
+   },
+   "expect": "nextMarkProvided=throw:GeneratorConflict|document already has generator, cannot provide external generator\ndropGenerator=ok\nnextMarkProvided=ok\nnextMarkProvided=ok\nnextMark=throw:NoGenerator|document does not have generator, must provide external generator\nnextMarkProvided=throw:SequenceMismatch|generator sequence mismatch: expected 3, got 1\nnextMarkProvided=throw:ChainIdMismatch|generator chain ID mismatch: expected 090bf2f8, got 3403eea7\n===\nXID(71274df1) [\n    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n        'allow': 'All'\n    ]\n    'provenance': ProvenanceMark(db0363c595aa57034b5042bd490f0988a45ed784cc56cc70253678520d0d0628)\n]"
+  },
+  {
+   "name": "mutate privateKeyBase:7eb559bb: nextMarkProvided,dropGenerator",
+   "recipe": {
+    "k": "mutate",
+    "doc": {
+     "inception": {
+      "kind": "privateKeyBase",
+      "seed": "7eb559bbbf6cce2632cf9f194aeb50943de7e1cbad54dcfab27a42759f5e2fed"
+     }
+    },
+    "ops": [
+     [
+      "nextMarkProvided",
+      {
+       "date": "2025-01-01T00:00:00Z",
+       "genesis": {
+        "passphrase": "Wolf",
+        "res": "low",
+        "date": "2025-01-01T00:00:00Z"
+       }
+      }
+     ],
+     [
+      "dropGenerator"
+     ]
+    ]
+   },
+   "expect": "nextMarkProvided=throw:NoProvenanceMark|no provenance mark to advance\ndropGenerator=ok\n===\nXID(71274df1) [\n    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n        'allow': 'All'\n    ]\n]"
+  },
+  {
+   "name": "mutate privateKeyBase:7eb559bb keys×2: removeEndpoint,removeEndpoint,removeEndpoint,removeEndpoint",
+   "recipe": {
+    "k": "mutate",
+    "doc": {
+     "inception": {
+      "kind": "privateKeyBase",
+      "seed": "7eb559bbbf6cce2632cf9f194aeb50943de7e1cbad54dcfab27a42759f5e2fed"
+     },
+     "keys": [
+      {
+       "seed": "518684c556472008a67932f7c682125b50cb72e8216f6906358fdaf28d354553",
+       "allow": [
+        "Sign"
+       ],
+       "endpoints": [
+        "https://e1.example",
+        "https://e2.example"
+       ]
+      },
+      {
+       "seed": "0000000000000000000000000000000000000000000000000000000000000001"
+      }
+     ]
+    },
+    "ops": [
+     [
+      "removeEndpoint",
+      0,
+      "https://e1.example"
+     ],
+     [
+      "removeEndpoint",
+      0,
+      "https://e1.example"
+     ],
+     [
+      "removeEndpoint",
+      1,
+      "https://e2.example"
+     ],
+     [
+      "removeEndpoint",
+      -1,
+      "https://none.example"
+     ]
+    ]
+   },
+   "expect": "removeEndpoint=true\nremoveEndpoint=false\nremoveEndpoint=false\nremoveEndpoint=false\n===\nXID(71274df1) [\n    'key': PublicKeys(22355237, SigningPublicKey(48f7e2df, Ed25519PublicKey(2c3d976b)), EncapsulationPublicKey(36a0b431, X25519PublicKey(36a0b431)))\n    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [\n        'allow': 'Sign'\n        'endpoint': URI(https://e2.example)\n    ]\n    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n        'allow': 'All'\n    ]\n]"
+  },
+  {
+   "name": "mutate privateKeyBase:7eb559bb keys×2 services×1: removeKeyReference,removeKeyReference,removeKeyReference,checkServices,removeKey",
+   "recipe": {
+    "k": "mutate",
+    "doc": {
+     "inception": {
+      "kind": "privateKeyBase",
+      "seed": "7eb559bbbf6cce2632cf9f194aeb50943de7e1cbad54dcfab27a42759f5e2fed"
+     },
+     "keys": [
+      {
+       "seed": "518684c556472008a67932f7c682125b50cb72e8216f6906358fdaf28d354553",
+       "allow": [
+        "Sign"
+       ]
+      },
+      {
+       "seed": "0000000000000000000000000000000000000000000000000000000000000001"
+      }
+     ],
+     "services": [
+      {
+       "uri": "https://s.example",
+       "keys": [
+        0
+       ],
+       "allow": [
+        "Sign"
+       ]
+      }
+     ]
+    },
+    "ops": [
+     [
+      "removeKeyReference",
+      "https://s.example",
+      0
+     ],
+     [
+      "removeKeyReference",
+      "https://s.example",
+      0
+     ],
+     [
+      "removeKeyReference",
+      "https://absent.example",
+      0
+     ],
+     [
+      "checkServices"
+     ],
+     [
+      "removeKey",
+      0
+     ]
+    ]
+   },
+   "expect": "removeKeyReference=true\nremoveKeyReference=false\nremoveKeyReference=undefined\ncheckServices=throw:NoReferences|no key or delegate references in service 'https://s.example'\nremoveKey=ok\n===\nXID(71274df1) [\n    'key': PublicKeys(22355237, SigningPublicKey(48f7e2df, Ed25519PublicKey(2c3d976b)), EncapsulationPublicKey(36a0b431, X25519PublicKey(36a0b431)))\n    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n        'allow': 'All'\n    ]\n    'service': URI(https://s.example) [\n        'allow': 'Sign'\n    ]\n]"
+  },
+  {
+   "name": "mutate privateKeyBase:7eb559bb delegates×1 services×1: removeDelegateReference,removeDelegateReference,removeDelegate,checkServices",
+   "recipe": {
+    "k": "mutate",
+    "doc": {
+     "inception": {
+      "kind": "privateKeyBase",
+      "seed": "7eb559bbbf6cce2632cf9f194aeb50943de7e1cbad54dcfab27a42759f5e2fed"
+     },
+     "delegates": [
+      {
+       "xidSeed": "518684c556472008a67932f7c682125b50cb72e8216f6906358fdaf28d354553",
+       "allow": [
+        "All"
+       ]
+      }
+     ],
+     "services": [
+      {
+       "uri": "https://d.example",
+       "delegates": [
+        0
+       ],
+       "allow": [
+        "Access"
+       ]
+      }
+     ]
+    },
+    "ops": [
+     [
+      "removeDelegateReference",
+      "https://d.example",
+      0
+     ],
+     [
+      "removeDelegateReference",
+      "https://d.example",
+      0
+     ],
+     [
+      "removeDelegate",
+      0
+     ],
+     [
+      "checkServices"
+     ]
+    ]
+   },
+   "expect": "removeDelegateReference=true\nremoveDelegateReference=false\nremoveDelegate=ok\ncheckServices=throw:NoReferences|no key or delegate references in service 'https://d.example'\n===\nXID(71274df1) [\n    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n        'allow': 'All'\n    ]\n    'service': URI(https://d.example) [\n        'allow': 'Access'\n    ]\n]"
   },
   {
    "name": "docEnvelope \"hello\" [none]",
@@ -8064,42 +8435,6 @@
    "expect": "throw:InvalidData|invalid URI: invalid URI format"
   },
   {
-   "name": "construct keyRefHex(\"7a41e4c6ebb7f5e0d4c7cbd0dc6cbd7cd6f6d7a5cf6f2ec74e8fd9b7fa3b4dd1\")",
-   "recipe": {
-    "k": "construct",
-    "op": "keyRefHex",
-    "v": "7a41e4c6ebb7f5e0d4c7cbd0dc6cbd7cd6f6d7a5cf6f2ec74e8fd9b7fa3b4dd1"
-   },
-   "expect": "1"
-  },
-  {
-   "name": "construct keyRefHex(\"zz\")",
-   "recipe": {
-    "k": "construct",
-    "op": "keyRefHex",
-    "v": "zz"
-   },
-   "expect": "throw:Hex|hex decoding error: Invalid character 'z' at position 0"
-  },
-  {
-   "name": "construct keyRefHex(\"abcd\")",
-   "recipe": {
-    "k": "construct",
-    "op": "keyRefHex",
-    "v": "abcd"
-   },
-   "expect": "throw:InvalidSize|invalid reference size: expected 32, got 2"
-  },
-  {
-   "name": "construct delegateRefHex(\"zz\")",
-   "recipe": {
-    "k": "construct",
-    "op": "delegateRefHex",
-    "v": "zz"
-   },
-   "expect": "throw:Hex|hex decoding error: Invalid character 'z' at position 0"
-  },
-  {
    "name": "doc privateKeys:7eb559bb+518684c5/schnorr [omit/omit/inception]",
    "recipe": {
     "k": "doc",
@@ -8142,7 +8477,7 @@
     "case": "privateKeys.null",
     "cls": "J3"
    },
-   "expect": "throw:TypeError|privateKeys must be omitted or undefined, not null"
+   "expect": "throw:TypeError|TypeError"
   },
   {
    "name": "domain genesis.empty (J3)",
@@ -8151,7 +8486,7 @@
     "case": "genesis.empty",
     "cls": "J3"
    },
-   "expect": "throw:TypeError|genesis needs exactly one of passphrase or seed"
+   "expect": "throw:TypeError|TypeError"
   },
   {
    "name": "domain genesis.seed.16 (J3)",
@@ -8178,7 +8513,7 @@
     "case": "genesis.date.invalid",
     "cls": "J3"
    },
-   "expect": "throw:TypeError|genesis.date must be a valid Date"
+   "expect": "throw:ProvenanceMark[InvalidDate]|provenance mark error"
   },
   {
    "name": "domain genesis.resolution.bogus (J3)",
@@ -8187,7 +8522,7 @@
     "case": "genesis.resolution.bogus",
     "cls": "J3"
    },
-   "expect": "throw:TypeError|genesis.resolution must be one of \"low\", \"medium\", \"quartile\", \"high\""
+   "expect": "throw:TypeError|TypeError"
   },
   {
    "name": "domain nextMark.date.invalid (J3)",
@@ -8196,16 +8531,7 @@
     "case": "nextMark.date.invalid",
     "cls": "J3"
    },
-   "expect": "throw:TypeError|date must be a valid Date"
-  },
-  {
-   "name": "domain nextMark.generatorAndPassword (J4)",
-   "recipe": {
-    "k": "domain",
-    "case": "nextMark.generatorAndPassword",
-    "cls": "J4"
-   },
-   "expect": "seq=1"
+   "expect": "throw:ProvenanceMark[InvalidDate]|provenance mark error"
   },
   {
    "name": "domain verify.bogus (J3)",
@@ -8214,7 +8540,7 @@
     "case": "verify.bogus",
     "cls": "J3"
    },
-   "expect": "throw:TypeError|verify must be one of \"none\", \"inception\""
+   "expect": "throw:TypeError|TypeError"
   },
   {
    "name": "domain privateKeys.bogus (J3)",
@@ -8223,7 +8549,7 @@
     "case": "privateKeys.bogus",
     "cls": "J3"
    },
-   "expect": "throw:TypeError|privateKeys must be one of \"omit\", \"include\", \"elide\""
+   "expect": "throw:TypeError|TypeError"
   },
   {
    "name": "domain generator.bogus (J3)",
@@ -8232,7 +8558,7 @@
     "case": "generator.bogus",
     "cls": "J3"
    },
-   "expect": "throw:TypeError|generator must be one of \"omit\", \"include\", \"elide\""
+   "expect": "throw:TypeError|TypeError"
   },
   {
    "name": "domain sign.bogus (J3)",
@@ -8241,7 +8567,7 @@
     "case": "sign.bogus",
     "cls": "J3"
    },
-   "expect": "throw:TypeError|sign must be one of \"none\", \"inception\""
+   "expect": "throw:TypeError|TypeError"
   },
   {
    "name": "domain inceptionKey.undefined (J3)",
@@ -8250,7 +8576,7 @@
     "case": "inceptionKey.undefined",
     "cls": "J3"
    },
-   "expect": "throw:TypeError|inceptionKey must be PublicKeys, a PrivateKeyBase or { publicKeys, privateKeys }"
+   "expect": "throw:TypeError|TypeError"
   },
   {
    "name": "domain random.genesis (J4)",
@@ -8262,13 +8588,130 @@
    "expect": "keys=1\nprovenance=ur:provenance/\ngenerator=held"
   },
   {
-   "name": "domain delegate.fromEnvelope.default (J4)",
+   "name": "domain genesis.date.cborDate (J4)",
    "recipe": {
     "k": "domain",
-    "case": "delegate.fromEnvelope.default",
+    "case": "genesis.date.cborDate",
     "cls": "J4"
    },
-   "expect": "equals=true\nformat={\n    XID(71274df1) [\n        'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n            'allow': 'All'\n        ]\n    ]\n} [\n    'allow': 'Sign'\n]"
+   "expect": "XID(71274df1) [\n    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [\n        'allow': 'All'\n    ]\n    'provenance': ProvenanceMark(18718810d8ea8fcb6bc621e1b5ade2dc427ca812cb869e8f9ebe4d26c1c18e41)\n]"
+  },
+  {
+   "name": "domain nextMark.date.cborDate (J4)",
+   "recipe": {
+    "k": "domain",
+    "case": "nextMark.date.cborDate",
+    "cls": "J4"
+   },
+   "expect": "seq=1"
+  },
+  {
+   "name": "domain inceptionKey.plainObject (J3)",
+   "recipe": {
+    "k": "domain",
+    "case": "inceptionKey.plainObject",
+    "cls": "J3"
+   },
+   "expect": "throw:TypeError|TypeError"
+  },
+  {
+   "name": "domain inceptionKey.pair.plain (J3)",
+   "recipe": {
+    "k": "domain",
+    "case": "inceptionKey.pair.plain",
+    "cls": "J3"
+   },
+   "expect": "throw:TypeError|TypeError"
+  },
+  {
+   "name": "domain addKey.plain (J3)",
+   "recipe": {
+    "k": "domain",
+    "case": "addKey.plain",
+    "cls": "J3"
+   },
+   "expect": "throw:TypeError|TypeError"
+  },
+  {
+   "name": "domain addService.plain (J3)",
+   "recipe": {
+    "k": "domain",
+    "case": "addService.plain",
+    "cls": "J3"
+   },
+   "expect": "throw:TypeError|TypeError"
+  },
+  {
+   "name": "domain addDelegate.plain (J3)",
+   "recipe": {
+    "k": "domain",
+    "case": "addDelegate.plain",
+    "cls": "J3"
+   },
+   "expect": "throw:TypeError|TypeError"
+  },
+  {
+   "name": "domain equals.plain (J3)",
+   "recipe": {
+    "k": "domain",
+    "case": "equals.plain",
+    "cls": "J3"
+   },
+   "expect": "throw:TypeError|TypeError"
+  },
+  {
+   "name": "domain provenance.equals.plain (J3)",
+   "recipe": {
+    "k": "domain",
+    "case": "provenance.equals.plain",
+    "cls": "J3"
+   },
+   "expect": "throw:TypeError|TypeError"
+  },
+  {
+   "name": "domain nextMark.generator.plain (J3)",
+   "recipe": {
+    "k": "domain",
+    "case": "nextMark.generator.plain",
+    "cls": "J3"
+   },
+   "expect": "throw:TypeError|TypeError"
+  },
+  {
+   "name": "domain setProvenance.string (J3)",
+   "recipe": {
+    "k": "domain",
+    "case": "setProvenance.string",
+    "cls": "J3"
+   },
+   "expect": "throw:TypeError|TypeError"
+  },
+  {
+   "name": "domain provenance.from.plain (J3)",
+   "recipe": {
+    "k": "domain",
+    "case": "provenance.from.plain",
+    "cls": "J3"
+   },
+   "expect": "throw:TypeError|TypeError"
+  },
+  {
+   "name": "domain setProvenanceWithGenerator.swapped (J3)",
+   "recipe": {
+    "k": "domain",
+    "case": "setProvenanceWithGenerator.swapped",
+    "cls": "J3"
+   },
+   "expect": "throw:TypeError|TypeError"
+  },
+  {
+   "name": "domain provenance.equals.generator (J4)",
+   "recipe": {
+    "k": "domain",
+    "case": "provenance.equals.generator",
+    "cls": "J4"
+   },
+   "expect": "same=true\nadvanced=false"
   }
  ]
 }

@@ -1,12 +1,12 @@
 /**
  * The module objects and sibling operations the adapters drive: the frozen
- * bundle (the published siblings it inlines), or the working tree with the
- * current siblings.
+ * bundle (the siblings it inlines), or the working tree with the current
+ * siblings.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrivateKeyBase, Salt, URI } from "@blockchaincommons/components";
 import { KeyDerivationMethod } from "@blockchaincommons/components/kdf";
-import { cbor } from "@blockchaincommons/dcbor";
+import { CborDate, cbor } from "@blockchaincommons/dcbor";
 import { Envelope } from "@blockchaincommons/envelope";
 import { format } from "@blockchaincommons/envelope/format";
 import { sign } from "@blockchaincommons/envelope/signature";
@@ -17,7 +17,7 @@ import {
   registerTags,
 } from "@blockchaincommons/provenance-mark";
 import { UR, decodeURWith } from "@blockchaincommons/uniform-resources";
-import { hex, unhex, type EdgeSpec, type Scheme, type SiblingDeps } from "./recipes";
+import { hex, unhex, type Scheme, type SiblingDeps } from "./recipes";
 
 const KDF: Record<string, string> = {
   hkdf: "HKDF",
@@ -37,62 +37,59 @@ const privOf = (p: any, scheme: Scheme | undefined): any =>
     : scheme === "ecdsa"
       ? p.ecdsaPrivateKeys()
       : p.ed25519PrivateKeys();
-const RES_NAME: Record<string, string> = {
-  low: "Low",
-  medium: "Medium",
-  quartile: "Quartile",
-  high: "High",
-};
-
 export async function baselineModule(): Promise<any> {
-  return await import("../baseline/xid-baseline.mjs");
+  const m: any = await import("../baseline/xid-baseline.mjs");
+  // The bundle's own envelope and provenance-mark summarisers, as the test setup registers them.
+  m.baselineRegisterTags();
+  return m;
 }
 
-/** Sibling operations over the frozen bundle's inlined siblings. */
+/**
+ * Sibling operations over the frozen bundle's inlined siblings (the classes
+ * the bundle's own code checks against), through the same API the working
+ * tree's siblings expose.
+ */
 export function baselineDeps(m: any): SiblingDeps {
-  const edge = (e: EdgeSpec): any =>
-    m.Envelope.new(e.subject)
-      .addAssertion(m.IS_A, e.isA)
-      .addAssertion(m.SOURCE, m.Envelope.new(e.source))
-      .addAssertion(m.TARGET, m.Envelope.new(e.target));
   return {
-    pkbFromSeed: (seed) => m.PrivateKeyBase.fromData(unhex(seed)),
+    pkbFromSeed: (seed) => m.PrivateKeyBase.from(unhex(seed)),
     pub: pubOf,
     priv: privOf,
     kdf: (k) => (k === undefined ? {} : { method: m.KeyDerivationMethod[KDF[k]] }),
     cborText: (s) => m.baselineCbor(s),
-    envelopeFrom: (x) => m.Envelope.new(x),
-    edgeEnvelope: edge,
-    format: (e) => e.format(),
-    cborHex: (e) => hex(e.taggedCborData()),
-    urString: (e) => e.urString(),
-    digestHex: (e) => e.digest().hex(),
-    envelopeFromUR: (ur) => m.Envelope.fromURString(ur),
-    referenceHex: (r) => hex(r.data()),
+    envelopeFrom: (x) => m.Envelope.from(x),
+    edgeEnvelope: (e) =>
+      m.Envelope.from(e.subject)
+        .addAssertion(m.IS_A, e.isA)
+        .addAssertion(m.SOURCE, m.Envelope.from(e.source))
+        .addAssertion(m.TARGET, m.Envelope.from(e.target)),
+    format: (e) => m.formatEnvelope(e),
+    cborHex: (e) => hex(e.toCbor().toData()),
+    urString: (e) => e.toUR().toString(),
+    digestHex: (e) => e.digest().toHex(),
+    envelopeFromUR: (ur) => m.decodeURWith(m.UR.parse(ur), m.Envelope.codec),
+    referenceHex: (r) => hex(r.bytes),
     xidHex: (x) => x.toHex(),
-    kvName: (kv) => kv.name(),
-    kvValue: (kv) => String(kv.value()),
-    seed: (bytes) => m.ProvenanceSeed.fromBytes(bytes),
-    resolution: (r) => m.ProvenanceMarkResolution[RES_NAME[r ?? "high"]],
+    kvName: (kv) => kv.name,
+    kvValue: (kv) => String(kv.value),
+    seed: (bytes) => m.ProvenanceSeed.from(bytes),
+    resolution: (r) => r ?? "high",
     generatorFromPassphrase: (res, passphrase) =>
-      m.ProvenanceMarkGenerator.newWithPassphrase(res, passphrase),
-    generatorFromSeed: (res, seed) => m.ProvenanceMarkGenerator.newWithSeed(res, seed),
-    markNext: (g, date, info) => g.next(date, info),
-    markUR: (mark) => mark.urString(),
-    generatorNextSeq: (g) => g.nextSeq(),
-    knownValueEnvelope: (value) => m.Envelope.newWithKnownValue(value),
-    uri: (s) => m.URI.new(s),
+      m.ProvenanceMarkGenerator.fromPassphrase(res, passphrase),
+    generatorFromSeed: (res, seed) => m.ProvenanceMarkGenerator.from({ res, seed }),
+    markNext: (g, date, info) => g.next(date, info === undefined ? {} : { info }),
+    markUR: (mark) => mark.toUR().toString(),
+    generatorNextSeq: (g) => g.nextSeq,
+    knownValueEnvelope: (value) => m.Envelope.knownValue(value),
+    uri: (s) => m.URI.from(s),
     bytesValue: (bytes) => bytes,
-    salt: () => {
-      throw new Error("baseline: the bundle exports no Salt");
-    },
-    assertionEnvelope: (p, o) => m.Envelope.newAssertion(p, o),
+    salt: (bytes) => m.Salt.from(bytes),
+    assertionEnvelope: (p, o) => m.Envelope.assertion(p, o),
     addAssertionEnvelope: (e, a) => e.addAssertionEnvelope(a),
     wrap: (e) => e.wrap(),
     elide: (e) => e.elide(),
-    sign: (e, privateKeys) => e.sign(privateKeys),
-    generatorEnvelope: (g) => g.intoEnvelope(),
-    parseUR: (s) => s,
+    sign: (e, privateKeys) => m.signEnvelope(e, privateKeys),
+    generatorEnvelope: (g) => g.toEnvelope(),
+    parseUR: (s) => m.UR.parse(s),
   };
 }
 
@@ -133,7 +130,7 @@ export const currentDeps: SiblingDeps = {
   generatorFromPassphrase: (res, passphrase) =>
     ProvenanceMarkGenerator.fromPassphrase(res, passphrase),
   generatorFromSeed: (res, seed) => ProvenanceMarkGenerator.from({ res, seed }),
-  markNext: (g, date, info) => g.next(date, info === undefined ? {} : { info }),
+  markNext: (g, date, info) => g.next(date, info),
   markUR: (mark) => mark.toUR().toString(),
   generatorNextSeq: (g) => g.nextSeq,
   knownValueEnvelope: (value) => Envelope.knownValue(value),
@@ -147,4 +144,5 @@ export const currentDeps: SiblingDeps = {
   sign: (e, privateKeys) => sign(e, privateKeys),
   generatorEnvelope: (g) => g.toEnvelope(),
   parseUR: (s) => UR.parse(s),
+  cborDate: (s) => CborDate.fromString(s),
 };

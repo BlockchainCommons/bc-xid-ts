@@ -38,5 +38,3 @@ bench/charts/*.html
 # Rust cross-validation harness build artifacts
 tests/rust-validation/target
 
-# The baseline closure is installed, not committed
-tests/baseline/node_modules/
