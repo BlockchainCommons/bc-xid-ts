@@ -84,10 +84,10 @@
     "node": ">=22.12"
   },
   "dependencies": {
-    "@blockchaincommons/components": "^1.0.0-beta.3",
+    "@blockchaincommons/components": "^1.0.0-beta.4",
     "@blockchaincommons/dcbor": "^1.0.0-beta.3",
     "@blockchaincommons/envelope": "^1.0.0-beta.3",
-    "@blockchaincommons/known-values": "^1.0.0-beta.3",
+    "@blockchaincommons/known-values": "^1.0.0-beta.4",
     "@blockchaincommons/provenance-mark": "^1.0.0-beta.3",
     "@blockchaincommons/rand": "^1.0.0-beta.3",
     "@blockchaincommons/tags": "^1.0.0-beta.3",
