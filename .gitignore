@@ -38,5 +38,13 @@ bench/charts/*.html
 # Rust cross-validation harness build artifacts
 tests/rust-validation/target
 
-# The baseline closure is installed, not committed
-tests/baseline/node_modules/
+# Lockfile: intentionally absent until @blockchaincommons/provenance-mark
+# 1.0.0-beta.3 is on npm (the registry has beta.2, and this package needs the
+# newer one; every other dependency is published). Until then nothing can be
+# resolved from the registry at all, and a local install resolves that
+# dependency through the workspace link, which would bake an unpublishable
+# path into the lockfile. The lockfile that used to be committed here listed
+# only devDependencies and no runtime ones, so `--frozen-lockfile` failed on
+# it. Once provenance-mark publishes, commit a real lockfile and switch the
+# workflows to `bun install --frozen-lockfile`.
+bun.lock

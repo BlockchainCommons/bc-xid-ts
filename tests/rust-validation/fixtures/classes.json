@@ -1,5 +1,5 @@
 {
- "count": 4,
+ "count": 3,
  "vectors": [
   {
    "name": "privileges (match)",
@@ -7,15 +7,6 @@
     "k": "privileges"
    },
    "expect": "All=All(70) 'All'\nAuth=Authorize(71) 'Authorize'\nSign=Sign(72) 'Sign'\nEncrypt=Encrypt(73) 'Encrypt'\nElide=Elide(74) 'Elide'\nIssue=Issue(75) 'Issue'\nAccess=Access(76) 'Access'\nDelegate=Delegate(80) 'Delegate'\nVerify=Verify(81) 'Verify'\nUpdate=Update(82) 'Update'\nTransfer=Transfer(83) 'Transfer'\nElect=Elect(84) 'Elect'\nBurn=Burn(85) 'Burn'\nRevoke=Revoke(86) 'Revoke'"
-  },
-  {
-   "name": "construct keyRefHex(\"zz\") (panic-mapped: the reference unwraps the hex decode)",
-   "recipe": {
-    "k": "construct",
-    "op": "keyRefHex",
-    "v": "zz"
-   },
-   "expect": "throw:Hex|hex decoding error: Invalid character 'z' at position 0"
   },
   {
    "name": "domain genesis.empty (js-only J3)",

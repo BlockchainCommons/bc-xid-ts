@@ -2,7 +2,7 @@ import { KnownValue } from "@blockchaincommons/known-values";
 import { Envelope, EnvelopeInput, ToEnvelope } from "@blockchaincommons/envelope";
 import { Cbor, CborCodec, CborTagged, Tag, ToCbor } from "@blockchaincommons/dcbor";
 import { Digest, EncapsulationPublicKey, PrivateKeyBase, PrivateKeys, PublicKeys, Reference, Salt, Signature, Signer, SigningPublicKey, URI, Verifier, XID } from "@blockchaincommons/components";
-import { ProvenanceMark, ProvenanceMarkGenerator, ProvenanceMarkResolution, ProvenanceSeed } from "@blockchaincommons/provenance-mark";
+import { DateInput, DateInput as DateInput$1, ProvenanceMark, ProvenanceMarkGenerator, ProvenanceMarkResolution, ProvenanceSeed } from "@blockchaincommons/provenance-mark";
 import { KeyDerivationMethod } from "@blockchaincommons/components/kdf";
 import { Attachments } from "@blockchaincommons/envelope/attachment";
 import { Edgeable, Edges } from "@blockchaincommons/envelope/edge";
@@ -18,7 +18,7 @@ import { RngOptions } from "@blockchaincommons/rand";
 /** Every code an `XIDError` can carry: the reference's `Error` variant names. */
 type XIDErrorCode = "Duplicate" | "NotFound" | "StillReferenced" | "EmptyValue" | "UnknownPrivilege" | "InvalidXid" | "MissingInceptionKey" | "InvalidResolutionMethod" | "MultipleProvenanceMarks" | "UnexpectedPredicate" | "UnexpectedNestedAssertions" | "NoPermissions" | "NoReferences" | "UnknownKeyReference" | "UnknownDelegateReference" | "KeyNotFoundInDocument" | "DelegateNotFoundInDocument" | "InvalidPassword" | "EnvelopeNotSigned" | "SignatureVerificationFailed" | "NoProvenanceMark" | "GeneratorConflict" | "NoGenerator" | "ChainIdMismatch" | "SequenceMismatch" | "EnvelopeParsing" | "Component" | "Cbor" | "ProvenanceMark";
 /** Every code, for exhaustive tables and tests. */
-declare const XID_ERROR_CODES: readonly XIDErrorCode[];
+export declare const XID_ERROR_CODES: readonly XIDErrorCode[];
 /** The fields each code carries besides `code`. */
 interface XIDErrorDetailsByCode {
   /** An item of this kind is already there. */
@@ -39,7 +39,7 @@ interface XIDErrorDetailsByCode {
   /** The field must not be empty. */
   EmptyValue: {
     /** The field's name. */
-    readonly item: string;
+    readonly field: string;
   };
   /** A known value that names no privilege. */
   UnknownPrivilege: unknown;
@@ -82,12 +82,12 @@ interface XIDErrorDetailsByCode {
     /** The service's URI. */
     readonly uri: string;
   };
-  /** `expectKey` found no such key. */
+  /** `checkContainsKey` found no such key. */
   KeyNotFoundInDocument: {
     /** The key's public keys, rendered. */
     readonly key: string;
   };
-  /** `expectDelegate` found no such delegate. */
+  /** `checkContainsDelegate` found no such delegate. */
   DelegateNotFoundInDocument: {
     /** The delegate's XID, rendered. */
     readonly delegate: string;
@@ -157,8 +157,10 @@ type XIDErrorTyped<C extends XIDErrorCode = XIDErrorCode> = C extends XIDErrorCo
   /** The condition's fields. */
   readonly details: XIDErrorDetailsFor<C>;
 } : never;
-/** `details` of the four item codes. */
-type ItemDetails = XIDErrorDetailsFor<"Duplicate" | "NotFound" | "StillReferenced" | "EmptyValue">;
+/** `details` of the three item codes. */
+type ItemDetails = XIDErrorDetailsFor<"Duplicate" | "NotFound" | "StillReferenced">;
+/** `details` of `EmptyValue`. */
+type EmptyValueDetails = XIDErrorDetailsFor<"EmptyValue">;
 /** `details` of the codes with nothing more to say. */
 type PlainDetails = XIDErrorDetailsFor<"UnknownPrivilege" | "InvalidXid" | "MissingInceptionKey" | "InvalidResolutionMethod" | "MultipleProvenanceMarks" | "UnexpectedNestedAssertions" | "InvalidPassword" | "EnvelopeNotSigned" | "SignatureVerificationFailed" | "NoProvenanceMark" | "GeneratorConflict" | "NoGenerator">;
 /** `details` of `UnexpectedPredicate`. */
@@ -191,7 +193,7 @@ type WrappedDetails = XIDErrorDetailsFor<"EnvelopeParsing" | "Component" | "Cbor
  * }
  * ```
  */
-declare class XIDError extends Error {
+export declare class XIDError extends Error {
   /** Always `"XIDError"`. */
   override readonly name = "XIDError";
   /** The condition, one of `XIDErrorCode`. */
@@ -235,9 +237,9 @@ declare class XIDError extends Error {
   static unknownKeyReference(reference: string, uri: string): XIDErrorTyped<"UnknownKeyReference">;
   /** `UnknownDelegateReference`: the service names a delegate the document lacks. */
   static unknownDelegateReference(reference: string, uri: string): XIDErrorTyped<"UnknownDelegateReference">;
-  /** `KeyNotFoundInDocument`: `expectKey` found no such key. */
+  /** `KeyNotFoundInDocument`: `checkContainsKey` found no such key. */
   static keyNotFoundInDocument(key: string): XIDErrorTyped<"KeyNotFoundInDocument">;
-  /** `DelegateNotFoundInDocument`: `expectDelegate` found no such delegate. */
+  /** `DelegateNotFoundInDocument`: `checkContainsDelegate` found no such delegate. */
   static delegateNotFoundInDocument(delegate: string): XIDErrorTyped<"DelegateNotFoundInDocument">;
   /** `InvalidPassword`: a locked key or generator did not open. */
   static invalidPassword(): XIDErrorTyped<"InvalidPassword">;
@@ -284,21 +286,21 @@ declare class XIDError extends Error {
  */
 type Privilege = "All" | "Auth" | "Sign" | "Encrypt" | "Elide" | "Issue" | "Access" | "Delegate" | "Verify" | "Update" | "Transfer" | "Elect" | "Burn" | "Revoke";
 /** Every privilege, in the reference's order. */
-declare const PRIVILEGES: readonly Privilege[];
+export declare const PRIVILEGES: readonly Privilege[];
 /** Whether `value` is one of the privilege names. */
-declare function isPrivilege(value: unknown): value is Privilege;
+export declare function isPrivilege(value: unknown): value is Privilege;
 /** The known value the privilege is encoded as; `UnknownPrivilege` for a name that is not one. */
-declare function privilegeKnownValue(privilege: Privilege): KnownValue;
+export declare function privilegeKnownValue(privilege: Privilege): KnownValue;
 /** The privilege a known value names; `UnknownPrivilege` for any other value. */
-declare function privilegeFromKnownValue(knownValue: KnownValue): Privilege;
+export declare function privilegeFromKnownValue(knownValue: KnownValue): Privilege;
 /** The privilege as a known-value envelope. */
-declare function privilegeEnvelope(privilege: Privilege): Envelope;
+export declare function privilegeEnvelope(privilege: Privilege): Envelope;
 /**
  * The privilege a known-value envelope names: `EnvelopeParsing` when the
  * subject is not a known value, `UnknownPrivilege` when it names no
  * privilege.
  */
-declare function privilegeFromEnvelope(envelope: Envelope): Privilege;
+export declare function privilegeFromEnvelope(envelope: Envelope): Privilege;
 //#endregion
 //#region src/permissions.d.ts
 /** What `Permissions.from` takes. */
@@ -308,17 +310,32 @@ interface PermissionsInput {
   /** The privileges denied. */
   deny?: Iterable<Privilege> | undefined;
 }
-/** Something that carries permissions: a key, a delegate, a service. */
+/**
+ * Something that carries permissions: a key, a delegate, a service. The
+ * members are the reference's `HasPermissions` trait: `allow` and `deny`
+ * are the sets, `addAllow`/`addDeny`/`removeAllow`/`removeDeny` and
+ * `clearAllPermissions` edit them.
+ */
 interface HasPermissions {
   /** The permissions (live). */
   readonly permissions: Permissions;
+  /** The allowed privileges (a copy). */
+  readonly allow: ReadonlySet<Privilege>;
+  /** The denied privileges (a copy). */
+  readonly deny: ReadonlySet<Privilege>;
   /** Allows `privilege`. */
-  allow(privilege: Privilege): void;
+  addAllow(privilege: Privilege): void;
   /** Denies `privilege`. */
-  deny(privilege: Privilege): void;
+  addDeny(privilege: Privilege): void;
+  /** Stops allowing `privilege`. */
+  removeAllow(privilege: Privilege): void;
+  /** Stops denying `privilege`. */
+  removeDeny(privilege: Privilege): void;
+  /** Empties both sets. */
+  clearAllPermissions(): void;
 }
 /** An allow set and a deny set of privileges. */
-declare class Permissions {
+export declare class Permissions {
   private readonly _allow;
   private readonly _deny;
   private constructor();
@@ -339,15 +356,7 @@ declare class Permissions {
   /** Stops denying `privilege`. */
   removeDeny(privilege: Privilege): void;
   /** Empties both sets. */
-  clear(): void;
-  /**
-   * Allowed (directly or through `All`) and not denied (directly or
-   * through `All`): a denial wins over an allowance. This is the
-   * package's own rule; the reference exposes the sets only.
-   */
-  isAllowed(privilege: Privilege): boolean;
-  /** Denied directly or through `All`. */
-  isDenied(privilege: Privilege): boolean;
+  clearAllPermissions(): void;
   /** Adds an `'allow'` assertion per allowed privilege, then a `'deny'` per denied one. */
   addToEnvelope(envelope: Envelope): Envelope;
   /**
@@ -401,7 +410,7 @@ interface KeyEnvelopeOptions {
  * A key of a XID document: public keys, optionally private keys (in the
  * clear or password-locked), a nickname, endpoints and permissions.
  */
-declare class Key implements HasPermissions, Verifier {
+export declare class Key implements HasPermissions, Verifier {
   private readonly _publicKeys;
   private readonly _privateKeyData;
   private _nickname;
@@ -440,6 +449,8 @@ declare class Key implements HasPermissions, Verifier {
   get endpoints(): ReadonlySet<URI>;
   /** Adds an endpoint, as a URI or its text (a components error for text that is not a URI). */
   addEndpoint(endpoint: URI | string): void;
+  /** Removes an endpoint; whether it was there. */
+  removeEndpoint(endpoint: URI | string): boolean;
   /** The nickname; empty when there is none. */
   get nickname(): string;
   /** Sets (or clears, with `""`) the nickname. */
@@ -448,10 +459,22 @@ declare class Key implements HasPermissions, Verifier {
   addNickname(name: string): void;
   /** The permissions (live). */
   get permissions(): Permissions;
+  /** The allowed privileges (a copy). */
+  get allow(): ReadonlySet<Privilege>;
+  /** The denied privileges (a copy). */
+  get deny(): ReadonlySet<Privilege>;
   /** Allows `privilege`. */
-  allow(privilege: Privilege): void;
+  addAllow(privilege: Privilege): void;
   /** Denies `privilege`. */
-  deny(privilege: Privilege): void;
+  addDeny(privilege: Privilege): void;
+  /** Stops allowing `privilege`. */
+  removeAllow(privilege: Privilege): void;
+  /** Stops denying `privilege`. */
+  removeDeny(privilege: Privilege): void;
+  /** Empties both sets. */
+  clearAllPermissions(): void;
+  /** `addAllow` under the reference's `Key::add_permission` name. */
+  addPermission(privilege: Privilege): void;
   private privateKeyAssertionEnvelope;
   /**
    * The public keys as the subject, the private keys per `privateKeys`
@@ -507,7 +530,7 @@ interface ServiceInput {
  * permissions round-trip: the parser rejects `'deny'` as the reference's
  * does.
  */
-declare class Service implements HasPermissions {
+export declare class Service implements HasPermissions {
   private readonly _uri;
   private readonly _keyReferences;
   private readonly _delegateReferences;
@@ -534,8 +557,8 @@ declare class Service implements HasPermissions {
   hasKeyReference(reference: Reference): boolean;
   /** Adds a key reference; `Duplicate` when it is already there. */
   addKeyReference(keyReference: Reference): void;
-  /** Adds a key reference given as 64 hex characters (a components error otherwise). */
-  addKeyReferenceHex(keyReferenceHex: string): void;
+  /** Removes a key reference; whether it was there. */
+  removeKeyReference(reference: Reference): boolean;
   /** References the key's public keys. */
   addKey(key: {
     readonly publicKeys: PublicKeys;
@@ -546,8 +569,8 @@ declare class Service implements HasPermissions {
   hasDelegateReference(reference: Reference): boolean;
   /** Adds a delegate reference; `Duplicate` when it is already there. */
   addDelegateReference(delegateReference: Reference): void;
-  /** Adds a delegate reference given as 64 hex characters (a components error otherwise). */
-  addDelegateReferenceHex(delegateReferenceHex: string): void;
+  /** Removes a delegate reference; whether it was there. */
+  removeDelegateReference(reference: Reference): boolean;
   /** References the delegate's (or document's) XID. */
   addDelegate(delegate: {
     readonly xid: XID;
@@ -558,10 +581,20 @@ declare class Service implements HasPermissions {
   setName(name: string): void;
   /** The permissions (live). */
   get permissions(): Permissions;
+  /** The allowed privileges (a copy). */
+  get allow(): ReadonlySet<Privilege>;
+  /** The denied privileges (a copy). */
+  get deny(): ReadonlySet<Privilege>;
   /** Allows `privilege`. */
-  allow(privilege: Privilege): void;
-  /** Denies `privilege` (written to the wire, but not read back: see the class). */
-  deny(privilege: Privilege): void;
+  addAllow(privilege: Privilege): void;
+  /** Denies `privilege`. Written to the wire, but not read back: see the class. */
+  addDeny(privilege: Privilege): void;
+  /** Stops allowing `privilege`. */
+  removeAllow(privilege: Privilege): void;
+  /** Stops denying `privilege`. */
+  removeDeny(privilege: Privilege): void;
+  /** Empties both sets. */
+  clearAllPermissions(): void;
   /** The URI as the subject; `'key'`, `'delegate'`, `'capability'`, `'name'` and the permissions. */
   toEnvelope(): Envelope;
   /**
@@ -590,45 +623,52 @@ interface XIDDocumentLike {
   /** A deep copy of the controller. */
   clone(): XIDDocumentLike;
 }
-/** Parses a controller document from its envelope: `XIDDocument.fromEnvelope`. */
-type ParseXIDDocument = (envelope: Envelope) => XIDDocumentLike;
 /** What `Delegate.from` takes besides the controller. */
 interface DelegateInput {
   /** The permissions granted; none unless given. */
   permissions?: Permissions | undefined;
 }
-/** What `Delegate.fromEnvelope` takes besides the envelope. */
-interface DelegateParseOptions {
-  /** The parser of the controller's envelope; `XIDDocument.fromEnvelope` unless given. */
-  parseDocument?: ParseXIDDocument | undefined;
-}
 /** A delegate: a controller document and the permissions this document grants it. */
-declare class Delegate implements HasPermissions {
+export declare class Delegate implements HasPermissions {
   private readonly _controller;
   private readonly _permissions;
   private constructor();
-  /** A delegate controlled by `controller`, with no permissions unless given. */
+  /**
+   * A delegate controlled by a copy of `controller` taken now (as the
+   * reference's `Delegate::new` clones it): a later change to the
+   * caller's document is not seen. No permissions unless given.
+   */
   static from(controller: XIDDocumentLike, { permissions }?: DelegateInput): Delegate;
-  /** The controlling document (live: mutating it mutates the delegate). */
+  /** The delegate's own copy of the controlling document (live: mutating it mutates the delegate). */
   get controller(): XIDDocumentLike;
   /** The controller's XID. */
   get xid(): XID;
   /** The reference of the controller's XID. */
   get reference(): Reference;
-  /** The permissions granted (live). */
+  /** The permissions (live). */
   get permissions(): Permissions;
+  /** The allowed privileges (a copy). */
+  get allow(): ReadonlySet<Privilege>;
+  /** The denied privileges (a copy). */
+  get deny(): ReadonlySet<Privilege>;
   /** Allows `privilege`. */
-  allow(privilege: Privilege): void;
+  addAllow(privilege: Privilege): void;
   /** Denies `privilege`. */
-  deny(privilege: Privilege): void;
+  addDeny(privilege: Privilege): void;
+  /** Stops allowing `privilege`. */
+  removeAllow(privilege: Privilege): void;
+  /** Stops denying `privilege`. */
+  removeDeny(privilege: Privilege): void;
+  /** Empties both sets. */
+  clearAllPermissions(): void;
   /** The controller's envelope, wrapped, with the permissions. */
   toEnvelope(): Envelope;
   /**
    * A delegate from its envelope: the permissions, then the unwrapped
-   * controller parsed by `parseDocument` (`XIDDocument.fromEnvelope`
-   * unless given). A sibling failure is `EnvelopeParsing`.
+   * controller parsed with `XIDDocument.fromEnvelope`. A sibling failure
+   * is `EnvelopeParsing`.
    */
-  static fromEnvelope(envelope: Envelope, { parseDocument }?: DelegateParseOptions): Delegate;
+  static fromEnvelope(envelope: Envelope): Delegate;
   /** Same controller document and permissions — as the reference's equality. */
   equals(other: Delegate): boolean;
   /** A deep copy. */
@@ -638,6 +678,25 @@ declare class Delegate implements HasPermissions {
 //#region src/provenance.d.ts
 /** How the generator goes into an envelope; the same four forms as private keys. */
 type XIDGeneratorOptions = "omit" | "include" | "elide" | EncryptOptions;
+/** The generator as held: in the clear, or the locked envelope as parsed. */
+type GeneratorData = {
+  /** Held in the clear. */
+  type: "decrypted";
+  /** The generator. */
+  generator: ProvenanceMarkGenerator;
+} | {
+  /** Held locked (parsed without the password). */
+  type: "encrypted";
+  /** The locked envelope. */
+  envelope: Envelope;
+};
+/** What `takeGenerator` hands back: the generator as held and its salt. */
+interface TakenGenerator {
+  /** The generator as held. */
+  readonly data: GeneratorData;
+  /** The salt the `'provenanceGenerator'` assertion carried. */
+  readonly salt: Salt;
+}
 /** What `Provenance.from` takes besides the mark. */
 interface ProvenanceInput {
   /** The generator that produced the mark, when the document should keep it. */
@@ -649,7 +708,7 @@ interface ProvenanceEnvelopeOptions {
   generator?: XIDGeneratorOptions | undefined;
 }
 /** A provenance mark and, optionally, the generator that continues its chain. */
-declare class Provenance {
+export declare class Provenance {
   private _mark;
   private _generator;
   private constructor();
@@ -669,8 +728,11 @@ declare class Provenance {
   setMark(mark: ProvenanceMark): void;
   /** Sets or replaces the generator, with a fresh salt. */
   setGenerator(generator: ProvenanceMarkGenerator): void;
-  /** Removes the generator, returning whether one was held. */
-  takeGenerator(): boolean;
+  /**
+   * Removes and returns the generator as held (in the clear or the locked
+   * envelope) with its salt; `undefined` when there is none.
+   */
+  takeGenerator(): TakenGenerator | undefined;
   /**
    * The generator, unlocking a locked one with the password (it stays
    * unlocked); `InvalidPassword` when it is locked and the password is
@@ -732,8 +794,8 @@ interface XIDGenesis {
   seed?: Uint8Array | ProvenanceSeed | undefined;
   /** The chain's resolution; `"high"` unless given. */
   resolution?: ProvenanceMarkResolution | undefined;
-  /** The genesis mark's date; now unless given. */
-  date?: Date | undefined;
+  /** The genesis mark's date, a `Date` or a `CborDate`; now unless given. */
+  date?: DateInput$1 | undefined;
   /** The genesis mark's info. */
   info?: Cbor | undefined;
 }
@@ -781,17 +843,19 @@ interface AttachmentInput {
   /** The URI of the format the payload conforms to. */
   conformsTo?: string | undefined;
 }
-/** What `nextProvenanceMark` takes. */
+/** What `nextProvenanceMarkWithEmbeddedGenerator` takes. */
 interface NextProvenanceMarkOptions extends PasswordOptions {
-  /** The new mark's date; now unless given. */
-  date?: Date | undefined;
+  /** The new mark's date, a `Date` or a `CborDate`; now unless given. */
+  date?: DateInput$1 | undefined;
   /** The new mark's info. */
   info?: Cbor | undefined;
-  /**
-   * A generator kept outside the document; refused when the document
-   * holds one. When given, `password` is not used.
-   */
-  generator?: ProvenanceMarkGenerator | undefined;
+}
+/** What `nextProvenanceMarkWithProvidedGenerator` takes besides the generator. */
+interface ProvidedGeneratorOptions {
+  /** The new mark's date, a `Date` or a `CborDate`; now unless given. */
+  date?: DateInput$1 | undefined;
+  /** The new mark's info. */
+  info?: Cbor | undefined;
 }
 /** The document's CBOR codec, with the tag it carries. */
 interface XIDDocumentCodec extends CborCodec<XIDDocument> {
@@ -805,7 +869,7 @@ interface XIDDocumentCodec extends CborCodec<XIDDocument> {
  * `services` are copied-out arrays of live values, and `attachments` and
  * `edges()` are the document's own containers.
  */
-declare class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeable {
+export declare class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeable {
   private readonly _xid;
   private readonly _resolutionMethods;
   private readonly _keys;
@@ -844,16 +908,16 @@ declare class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgea
   get resolutionMethods(): ReadonlySet<URI>;
   /** Adds a resolution method, as a URI or its text (a components error for text that is not a URI). */
   addResolutionMethod(method: URI | string): void;
-  /** Removes a resolution method; whether it was there. */
-  removeResolutionMethod(method: URI | string): boolean;
+  /** Removes and returns a resolution method; `undefined` when it was not there. */
+  removeResolutionMethod(method: URI | string): URI | undefined;
   /** The keys (a copied-out array of live keys). */
   get keys(): readonly Key[];
   /** Adds a key; `Duplicate` when the public keys are already there. */
   addKey(key: Key): void;
   /** The key with these public keys. */
-  key(publicKeys: PublicKeys): Key | undefined;
+  findKeyByPublicKeys(publicKeys: PublicKeys): Key | undefined;
   /** The key with this reference. */
-  keyByReference(reference: Reference): Key | undefined;
+  findKeyByReference(reference: Reference): Key | undefined;
   /**
    * Removes and returns the key; `StillReferenced` when a service names
    * it, `NotFound` when it is not there.
@@ -861,8 +925,8 @@ declare class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgea
   removeKey(publicKeys: PublicKeys): Key;
   /** Removes and returns the key without checking services; `undefined` when absent. */
   takeKey(publicKeys: PublicKeys): Key | undefined;
-  /** The key with these public keys; `KeyNotFoundInDocument` unless it is there. */
-  expectKey(publicKeys: PublicKeys): Key;
+  /** `KeyNotFoundInDocument` unless the key with these public keys is there. */
+  checkContainsKey(publicKeys: PublicKeys): void;
   /** Whether the XID derives from this signing key. */
   isInceptionSigningKey(signingPublicKey: SigningPublicKey): boolean;
   /** The key whose signing key the XID derives from. */
@@ -882,25 +946,25 @@ declare class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgea
   /** The private keys of a key as an envelope (see `Key.privateKeyEnvelope`). */
   privateKeyEnvelopeForKey(publicKeys: PublicKeys, options?: PasswordOptions): Envelope | undefined;
   /** The inception key's private keys of a parsed envelope, unlocked with the password. */
-  static inceptionPrivateKeysFromEnvelope(envelope: Envelope, { password }?: PasswordOptions): PrivateKeys | undefined;
+  static extractInceptionPrivateKeysFromEnvelope(envelope: Envelope, { password }?: PasswordOptions): PrivateKeys | undefined;
   /** The delegates (a copied-out array of live delegates). */
   get delegates(): readonly Delegate[];
   /** Adds a delegate; `Duplicate` when a delegate with that XID is already there. */
   addDelegate(delegate: Delegate): void;
   /** The delegate with this XID. */
-  delegate(xid: XID): Delegate | undefined;
+  findDelegateByXid(xid: XID): Delegate | undefined;
   /** The delegate whose XID has this reference. */
-  delegateByReference(reference: Reference): Delegate | undefined;
+  findDelegateByReference(reference: Reference): Delegate | undefined;
   /** Removes and returns the delegate; `StillReferenced` when a service names it, `NotFound` when absent. */
   removeDelegate(xid: XID): Delegate;
   /** Removes and returns the delegate without checking services; `undefined` when absent. */
   takeDelegate(xid: XID): Delegate | undefined;
-  /** The delegate with this XID; `DelegateNotFoundInDocument` unless it is there. */
-  expectDelegate(xid: XID): Delegate;
+  /** `DelegateNotFoundInDocument` unless the delegate with this XID is there. */
+  checkContainsDelegate(xid: XID): void;
   /** The services (a copied-out array of live services). */
   get services(): readonly Service[];
   /** The service at this URI. */
-  service(uri: URI | string): Service | undefined;
+  findServiceByUri(uri: URI | string): Service | undefined;
   /** Adds a service; `Duplicate` when a service at that URI is already there. */
   addService(service: Service): void;
   /** Removes and returns the service; `undefined` when absent. */
@@ -908,13 +972,13 @@ declare class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgea
   /** Removes and returns the service; `NotFound` when absent. */
   removeService(uri: URI | string): Service;
   /** Every service references known keys and delegates and allows something. */
-  expectServicesConsistent(): void;
+  checkServicesConsistency(): void;
   /**
    * `NoReferences` without any key or delegate reference,
    * `UnknownKeyReference`/`UnknownDelegateReference` for one the document
    * lacks, `NoPermissions` without an allowed privilege.
    */
-  expectServiceConsistent(service: Service): void;
+  checkServiceConsistency(service: Service): void;
   /** Whether any service references this key. */
   servicesReferenceKey(publicKeys: PublicKeys): boolean;
   /** Whether any service references this delegate. */
@@ -926,7 +990,7 @@ declare class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgea
   /** Adds an attachment. */
   addAttachment({ payload, vendor, conformsTo }: AttachmentInput): void;
   /** The attachment with this digest. */
-  attachment(digest: Digest): Envelope | undefined;
+  getAttachment(digest: Digest): Envelope | undefined;
   /** Removes and returns the attachment with this digest. */
   removeAttachment(digest: Digest): Envelope | undefined;
   /** Removes every attachment. */
@@ -939,9 +1003,7 @@ declare class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgea
   hasEdges(): boolean;
   /** Adds an edge envelope. */
   addEdge(edgeEnvelope: Envelope): void;
-  /** The edge with this digest. */
-  edge(digest: Digest): Envelope | undefined;
-  /** `edge(digest)` under the name envelope's `Edgeable` uses. */
+  /** The edge with this digest (envelope's `Edgeable`). */
   getEdge(digest: Digest): Envelope | undefined;
   /** Removes and returns the edge with this digest. */
   removeEdge(digest: Digest): Envelope | undefined;
@@ -956,15 +1018,28 @@ declare class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgea
   /** Sets the mark and the generator that continues its chain. */
   setProvenanceWithGenerator(generator: ProvenanceMarkGenerator, mark: ProvenanceMark): void;
   /**
-   * Advances the chain: with the document's own generator (unlocked with
-   * the password when locked), or with a provided one when the document
-   * has none. The generator must continue the current mark's chain at
-   * the next sequence number. `NoProvenanceMark` without a mark,
-   * `NoGenerator`/`GeneratorConflict` for the wrong choice,
-   * `ChainIdMismatch`/`SequenceMismatch` for a generator that does not
-   * continue the mark; an invalid date is a `TypeError`.
+   * Advances the chain with the document's own generator, unlocked with
+   * the password when it is locked; the generator stays in the document.
+   * `NoProvenanceMark` without a mark, `NoGenerator` without a generator,
+   * `InvalidPassword` when it is locked and the password is missing or
+   * wrong, `ChainIdMismatch`/`SequenceMismatch` when the generator does
+   * not continue the mark at the next sequence number; a `Date` without a
+   * time is `ProvenanceMark[InvalidDate]`; a date of another kind is a
+   * `TypeError`.
    */
-  nextProvenanceMark({ date, info, password, generator }?: NextProvenanceMarkOptions): void;
+  nextProvenanceMarkWithEmbeddedGenerator({ password, date, info }?: NextProvenanceMarkOptions): void;
+  /**
+   * Advances the chain with a generator the caller keeps; the generator
+   * is advanced in place and not stored. `NoProvenanceMark` without a
+   * mark, `GeneratorConflict` when the document holds a generator (in the
+   * clear or locked), `ChainIdMismatch`/`SequenceMismatch` when the
+   * generator does not continue the mark at the next sequence number; a
+   * `Date` without a time is `ProvenanceMark[InvalidDate]`; a generator or
+   * date of another kind is a `TypeError`.
+   */
+  nextProvenanceMarkWithProvidedGenerator(generator: ProvenanceMarkGenerator, { date, info }?: ProvidedGeneratorOptions): void;
+  /** The checks and the step both forms share. */
+  private advance;
   /**
    * The XID as the subject; `'dereferenceVia'`, `'key'`, `'delegate'`,
    * `'service'`, `'provenance'`, the extra assertions, attachments and
@@ -1033,5 +1108,5 @@ declare class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgea
   toString(): string;
 }
 //#endregion
-export { type AttachmentInput, type ChainIdMismatchDetails, Delegate, type DelegateInput, type DelegateNotFoundDetails, type DelegateParseOptions, type EncryptOptions, type HasPermissions, type ItemDetails, Key, type KeyEnvelopeOptions, type KeyInput, type KeyNotFoundDetails, type NextProvenanceMarkOptions, PRIVILEGES, type ParseXIDDocument, type PasswordOptions, Permissions, type PermissionsInput, type PlainDetails, type Privilege, Provenance, type ProvenanceEnvelopeOptions, type ProvenanceInput, type SequenceMismatchDetails, Service, type ServiceDetails, type ServiceInput, type SignedEnvelopeOptions, type UnexpectedPredicateDetails, type UnknownReferenceDetails, type WrappedDetails, XIDDocument, type XIDDocumentCodec, type XIDDocumentInput, type XIDDocumentLike, type XIDEnvelopeOptions, XIDError, type XIDErrorCode, type XIDErrorDetails, type XIDErrorDetailsByCode, type XIDErrorDetailsFor, type XIDErrorTyped, type XIDGeneratorOptions, type XIDGenesis, type XIDInceptionKey, type XIDInceptionKeyPair, type XIDParseOptions, type XIDPrivateKeyOptions, type XIDRandomOptions, type XIDSigning, type XIDVerifySignature, XID_ERROR_CODES, isPrivilege, privilegeEnvelope, privilegeFromEnvelope, privilegeFromKnownValue, privilegeKnownValue };
+export type { AttachmentInput, ChainIdMismatchDetails, DateInput, DelegateInput, DelegateNotFoundDetails, EmptyValueDetails, EncryptOptions, GeneratorData, HasPermissions, ItemDetails, KeyEnvelopeOptions, KeyInput, KeyNotFoundDetails, NextProvenanceMarkOptions, PasswordOptions, PermissionsInput, PlainDetails, Privilege, ProvenanceEnvelopeOptions, ProvenanceInput, ProvidedGeneratorOptions, SequenceMismatchDetails, ServiceDetails, ServiceInput, SignedEnvelopeOptions, TakenGenerator, UnexpectedPredicateDetails, UnknownReferenceDetails, WrappedDetails, XIDDocumentCodec, XIDDocumentInput, XIDDocumentLike, XIDEnvelopeOptions, XIDErrorCode, XIDErrorDetails, XIDErrorDetailsByCode, XIDErrorDetailsFor, XIDErrorTyped, XIDGeneratorOptions, XIDGenesis, XIDInceptionKey, XIDInceptionKeyPair, XIDParseOptions, XIDPrivateKeyOptions, XIDRandomOptions, XIDSigning, XIDVerifySignature };
 //# sourceMappingURL=index.d.mts.map

@@ -189,12 +189,12 @@ describe("decode boundary", () => {
 
   it("renders references in the reference's short form", () => {
     const service = Service.from("https://s.example", { allow: ["Sign"] } as never);
-    service.allow("Sign");
+    service.addAllow("Sign");
     service.addKeyReference(bob.schnorrPublicKeys().reference());
     const e = xidError(() => {
       const d = XIDDocument.from({ inceptionKey: alice.schnorrPublicKeys() });
       d.addService(service);
-      d.expectServicesConsistent();
+      d.checkServicesConsistency();
     });
     expect(e.code).toBe("UnknownKeyReference");
     expect(e.is("UnknownKeyReference") && e.details.reference).toMatch(
@@ -270,11 +270,22 @@ describe("JavaScript-domain guards", () => {
       expect(e.code).toBe("ProvenanceMark");
       expect(ProvenanceMarkError.isProvenanceMarkError(e.cause)).toBe(true);
     }
+    const invalidDate = xidError(() =>
+      XIDDocument.from({ inceptionKey: alice, genesis: { ...wolf, date: new Date(NaN) } }),
+    );
+    expect(invalidDate.code).toBe("ProvenanceMark");
+    expect(
+      ProvenanceMarkError.isProvenanceMarkError(invalidDate.cause) &&
+        invalidDate.cause.is("InvalidDate"),
+    ).toBe(true);
     expect(
       typeError(() =>
-        XIDDocument.from({ inceptionKey: alice, genesis: { ...wolf, date: new Date(NaN) } }),
+        XIDDocument.from({
+          inceptionKey: alice,
+          genesis: { ...wolf, date: "2025-01-01" as never },
+        }),
       ),
-    ).toMatch(/genesis.date/);
+    ).toMatch(/genesis.date must be a Date or a CborDate/);
     expect(
       typeError(() =>
         XIDDocument.from({
@@ -283,7 +294,17 @@ describe("JavaScript-domain guards", () => {
         }),
       ),
     ).toMatch(/genesis.resolution/);
-    expect(typeError(() => doc.nextProvenanceMark({ date: new Date(NaN) }))).toMatch(/date/);
+    const nextInvalidDate = xidError(() =>
+      doc.nextProvenanceMarkWithEmbeddedGenerator({ date: new Date(NaN) }),
+    );
+    expect(nextInvalidDate.code).toBe("ProvenanceMark");
+    expect(
+      ProvenanceMarkError.isProvenanceMarkError(nextInvalidDate.cause) &&
+        nextInvalidDate.cause.is("InvalidDate"),
+    ).toBe(true);
+    expect(
+      typeError(() => doc.nextProvenanceMarkWithEmbeddedGenerator({ date: 1 as never })),
+    ).toMatch(/date must be a Date or a CborDate/);
   });
 
   it("rejects unknown option strings", () => {
@@ -319,7 +340,7 @@ describe("nicknames", () => {
     key.setNickname("");
     expect(xidError(() => key.addNickname("")).details).toEqual({
       code: "EmptyValue",
-      item: "nickname",
+      field: "nickname",
     });
     key.setNickname("c");
     expect(key.nickname).toBe("c");
@@ -336,7 +357,7 @@ describe("copy-out and live handles", () => {
     doc.keys[0].setNickname("live");
     expect(doc.inceptionKey?.nickname).toBe("live");
     doc.keys[0].permissions.addDeny("Sign");
-    expect(doc.inceptionKey?.permissions.isDenied("Sign")).toBe(true);
+    expect(doc.inceptionKey?.deny.has("Sign")).toBe(true);
     const permissions = Permissions.from({ allow: ["Sign"] });
     (permissions.allow as Set<string>).add("Burn");
     expect(permissions.allow.size).toBe(1);
@@ -344,26 +365,39 @@ describe("copy-out and live handles", () => {
     expect(doc.extraAssertions).toHaveLength(0);
   });
 
-  it("Permissions: isAllowed gives a denial precedence, remove and clear", () => {
+  it("carriers edit their permissions under the reference's names", () => {
+    const key = Key.from(alice.schnorrPublicKeys());
+    const service = Service.from("https://s.example");
+    const delegate = Delegate.from(XIDDocument.from({ inceptionKey: bob.schnorrPublicKeys() }));
+    for (const carrier of [key, service, delegate]) {
+      carrier.addAllow("Sign");
+      carrier.addDeny("Burn");
+      expect([...carrier.allow]).toEqual(["Sign"]);
+      expect([...carrier.deny]).toEqual(["Burn"]);
+      expect(carrier.permissions.allow.has("Sign")).toBe(true);
+      carrier.removeAllow("Sign");
+      carrier.removeDeny("Burn");
+      expect(carrier.allow.size + carrier.deny.size).toBe(0);
+      carrier.addAllow("All");
+      carrier.addDeny("All");
+      carrier.clearAllPermissions();
+      expect(carrier.permissions.equals(Permissions.from())).toBe(true);
+      // The getters copy out.
+      carrier.addAllow("Sign");
+      (carrier.allow as Set<string>).add("Burn");
+      expect(carrier.allow.size).toBe(1);
+    }
+    key.addPermission("Encrypt");
+    expect(key.allow.has("Encrypt")).toBe(true);
     const p = Permissions.from({ allow: ["All"], deny: ["Burn"] });
-    expect(p.isAllowed("Sign")).toBe(true);
-    expect(p.isAllowed("Burn")).toBe(false);
-    expect(p.isDenied("Burn")).toBe(true);
-    expect(p.isDenied("Sign")).toBe(false);
     p.removeDeny("Burn");
-    expect(p.isAllowed("Burn")).toBe(true);
-    p.addDeny("All");
-    expect(p.isAllowed("Sign")).toBe(false);
-    expect(p.isDenied("Sign")).toBe(true);
     p.removeAllow("All");
-    p.removeDeny("All");
-    expect(p.isAllowed("Sign")).toBe(false);
     p.addAllow("Sign");
-    p.clear();
+    p.clearAllPermissions();
     expect(p.allow.size + p.deny.size).toBe(0);
   });
 
-  it("delegates parse with the default document parser", () => {
+  it("delegates parse their controller with XIDDocument.fromEnvelope", () => {
     const controller = XIDDocument.from({ inceptionKey: bob.schnorrPublicKeys() });
     const delegate = Delegate.from(controller, {
       permissions: Permissions.from({ allow: ["Sign"] }),
@@ -373,15 +407,34 @@ describe("copy-out and live handles", () => {
     expect(back.controller.xid.equals(controller.xid)).toBe(true);
   });
 
-  it("takeGenerator reports whether a generator was held", () => {
+  it("takeGenerator hands back the generator as held, with its salt", () => {
     const doc = XIDDocument.from({ inceptionKey: alice, genesis: wolf });
     const mark = doc.provenance;
     const generator = doc.provenanceGenerator;
     if (mark === undefined || generator === undefined) throw new Error("no provenance");
     const provenance = Provenance.from(mark, { generator });
-    expect(provenance.takeGenerator()).toBe(true);
+    const salt = provenance.generatorSalt;
+    const taken = provenance.takeGenerator();
+    expect(taken?.data.type).toBe("decrypted");
+    expect(taken?.data.type === "decrypted" && taken.data.generator.equals(generator)).toBe(true);
+    expect(salt !== undefined && taken?.salt.equals(salt)).toBe(true);
     expect(provenance.hasGenerator).toBe(false);
-    expect(provenance.takeGenerator()).toBe(false);
+    expect(provenance.takeGenerator()).toBeUndefined();
+
+    const locked = Provenance.fromEnvelope(
+      Provenance.from(mark, { generator }).toEnvelope({ generator: { encrypt: "pw" } }),
+    );
+    const lockedTaken = locked.takeGenerator();
+    expect(lockedTaken?.data.type).toBe("encrypted");
+    expect(locked.hasEncryptedGenerator).toBe(false);
+  });
+
+  it("removeResolutionMethod returns the URI it removed", () => {
+    const doc = XIDDocument.from({ inceptionKey: alice });
+    doc.addResolutionMethod("https://r.example");
+    expect(doc.removeResolutionMethod("https://r.example")?.toString()).toBe("https://r.example");
+    expect(doc.removeResolutionMethod(URI.from("https://r.example"))).toBeUndefined();
+    expect(doc.resolutionMethods.size).toBe(0);
   });
 });
 

@@ -121,9 +121,9 @@ export class Service implements HasPermissions {
     this._keyReferences.set(key, keyReference);
   }
 
-  /** Adds a key reference given as 64 hex characters (a components error otherwise). */
-  addKeyReferenceHex(keyReferenceHex: string): void {
-    this.addKeyReference(Reference.fromHex(keyReferenceHex));
+  /** Removes a key reference; whether it was there. */
+  removeKeyReference(reference: Reference): boolean {
+    return this._keyReferences.delete(reference.toHex());
   }
 
   /** References the key's public keys. */
@@ -148,9 +148,9 @@ export class Service implements HasPermissions {
     this._delegateReferences.set(key, delegateReference);
   }
 
-  /** Adds a delegate reference given as 64 hex characters (a components error otherwise). */
-  addDelegateReferenceHex(delegateReferenceHex: string): void {
-    this.addDelegateReference(Reference.fromHex(delegateReferenceHex));
+  /** Removes a delegate reference; whether it was there. */
+  removeDelegateReference(reference: Reference): boolean {
+    return this._delegateReferences.delete(reference.toHex());
   }
 
   /** References the delegate's (or document's) XID. */
@@ -175,14 +175,39 @@ export class Service implements HasPermissions {
     return this._permissions;
   }
 
+  /** The allowed privileges (a copy). */
+  get allow(): ReadonlySet<Privilege> {
+    return this._permissions.allow;
+  }
+
+  /** The denied privileges (a copy). */
+  get deny(): ReadonlySet<Privilege> {
+    return this._permissions.deny;
+  }
+
   /** Allows `privilege`. */
-  allow(privilege: Privilege): void {
+  addAllow(privilege: Privilege): void {
     this._permissions.addAllow(privilege);
   }
 
-  /** Denies `privilege` (written to the wire, but not read back: see the class). */
-  deny(privilege: Privilege): void {
+  /** Denies `privilege`. Written to the wire, but not read back: see the class. */
+  addDeny(privilege: Privilege): void {
     this._permissions.addDeny(privilege);
+  }
+
+  /** Stops allowing `privilege`. */
+  removeAllow(privilege: Privilege): void {
+    this._permissions.removeAllow(privilege);
+  }
+
+  /** Stops denying `privilege`. */
+  removeDeny(privilege: Privilege): void {
+    this._permissions.removeDeny(privilege);
+  }
+
+  /** Empties both sets. */
+  clearAllPermissions(): void {
+    this._permissions.clearAllPermissions();
   }
 
   /** The URI as the subject; `'key'`, `'delegate'`, `'capability'`, `'name'` and the permissions. */

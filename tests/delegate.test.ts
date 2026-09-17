@@ -4,6 +4,7 @@
  */
 
 import { PrivateKeyBase } from "@blockchaincommons/components";
+import { format } from "@blockchaincommons/envelope/format";
 import { Delegate, XIDDocument } from "../src";
 
 describe("Delegate", () => {
@@ -34,9 +35,7 @@ describe("Delegate", () => {
 
     // Round-trip through envelope
     const envelope2 = bobDelegate.toEnvelope();
-    const bobDelegate2 = Delegate.fromEnvelope(envelope2, {
-      parseDocument: (e) => XIDDocument.fromEnvelope(e),
-    });
+    const bobDelegate2 = Delegate.fromEnvelope(envelope2);
     expect(bobDelegate.equals(bobDelegate2)).toBe(true);
 
     // Add Bob as delegate to Alice's document
@@ -58,13 +57,31 @@ describe("Delegate", () => {
       expect(delegate.xid.equals(xidDocument.xid)).toBe(true);
     });
 
-    it("should access controller through shared reference", () => {
+    it("holds its own copy of the controller, taken at construction", () => {
       const privateKeyBase = PrivateKeyBase.random();
       const xidDocument = XIDDocument.from({ inceptionKey: privateKeyBase.ed25519PublicKeys() });
 
       const delegate = Delegate.from(xidDocument);
-      const controller = delegate.controller;
-      expect(controller.xid.equals(xidDocument.xid)).toBe(true);
+      expect(delegate.controller.xid.equals(xidDocument.xid)).toBe(true);
+      expect(delegate.controller).not.toBe(xidDocument);
+
+      // A later change to the source document is not seen; one made
+      // through the delegate's own copy is.
+      xidDocument.addResolutionMethod("https://later.example");
+      expect(format(delegate.toEnvelope())).not.toContain("later.example");
+      (delegate.controller as XIDDocument).addResolutionMethod("https://own.example");
+      expect(format(delegate.toEnvelope())).toContain("own.example");
+      expect(delegate.equals(Delegate.from(xidDocument))).toBe(false);
+    });
+
+    it("copies the controller on clone, so a clone's changes stay in the clone", () => {
+      const privateKeyBase = PrivateKeyBase.random();
+      const xidDocument = XIDDocument.from({ inceptionKey: privateKeyBase.ed25519PublicKeys() });
+      const delegate = Delegate.from(xidDocument);
+      const cloned = delegate.clone();
+      (cloned.controller as XIDDocument).addResolutionMethod("https://clone.example");
+      expect(delegate.controller.equals(cloned.controller)).toBe(false);
+      expect(delegate.equals(cloned)).toBe(false);
     });
 
     it("should get delegate reference", () => {

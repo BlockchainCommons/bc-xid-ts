@@ -83,7 +83,10 @@ describe("Custom assertion preservation", () => {
       .addAssertion("customField", "customValue");
 
     const parsedDocument = XIDDocument.fromEnvelope(envelope);
-    parsedDocument.nextProvenanceMark({ date: new Date(Date.UTC(2024, 0, 2)), info: cbor("Next") });
+    parsedDocument.nextProvenanceMarkWithEmbeddedGenerator({
+      date: new Date(Date.UTC(2024, 0, 2)),
+      info: cbor("Next"),
+    });
 
     const advancedEnvelope = parsedDocument.toEnvelope({ generator: "include" });
 

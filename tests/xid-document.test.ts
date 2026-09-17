@@ -111,12 +111,12 @@ describe("XIDDocument", () => {
 
       const xidDocument = XIDDocument.from({ inceptionKey: privateKeyBase.ed25519PublicKeys() });
 
-      const foundKey = xidDocument.key(privateKeyBase.ed25519PublicKeys());
+      const foundKey = xidDocument.findKeyByPublicKeys(privateKeyBase.ed25519PublicKeys());
       expect(foundKey).toBeDefined();
       if (foundKey === undefined) throw new Error("Expected foundKey");
 
       const reference = foundKey.reference;
-      const foundByRef = xidDocument.keyByReference(reference);
+      const foundByRef = xidDocument.findKeyByReference(reference);
       expect(foundByRef).toBeDefined();
       expect(foundByRef?.equals(foundKey)).toBe(true);
     });
@@ -174,7 +174,7 @@ describe("XIDDocument", () => {
       expect(aliceXidDocument.delegates.length).toBe(1);
 
       // Find delegate
-      const found = aliceXidDocument.delegate(bobXidDocument.xid);
+      const found = aliceXidDocument.findDelegateByXid(bobXidDocument.xid);
       expect(found).toBeDefined();
 
       // Round-trip through envelope
@@ -701,7 +701,7 @@ describe("XIDDocument", () => {
       expect(xidDocument.keys.length).toBe(2);
 
       // Find the PQ key
-      const foundKey = xidDocument.key(publicKeys);
+      const foundKey = xidDocument.findKeyByPublicKeys(publicKeys);
       expect(foundKey).toBeDefined();
     });
   });
@@ -888,9 +888,7 @@ describe("XIDDocument", () => {
       const envelope = doc.privateKeyEnvelopeForKey(pubkeys);
       expect(envelope).toBeDefined();
 
-      // PrivateKeys is now stored as a tagged-CBOR leaf (mirrors Rust);
-      // the previous test asserted a byte-string subject which was the
-      // pre-fix shape.
+      // PrivateKeys is stored as a tagged-CBOR leaf, mirroring Rust.
       const leaf = (envelope?.subject() as unknown as { asLeaf(): unknown }).asLeaf();
       expect(leaf).toBeDefined();
     });

@@ -277,8 +277,8 @@ XID(71274df1) [
 ]",
   "## mutate privateKeyBase:7eb559bb res×1: addResolution,removeResolution,removeResolution,addResolution
 addResolution=ok
-removeResolution=true
-removeResolution=false
+removeResolution=https://r.example
+removeResolution=undefined
 addResolution=ok
 ===
 XID(71274df1) [
@@ -328,6 +328,76 @@ XID(71274df1) [
         'allow': 'All'
     ]
     'provenance': ProvenanceMark(2c4ca5f83803166663f9f8cedacc1946b570632324b377f9be8bdfba3fae9f21)
+]",
+  "## mutate privateKeyBase:7eb559bb genesis(low "Wolf" 2025-01-01T00:00:00Z): nextMarkProvided,dropGenerator,nextMarkProvided,nextMarkProvided,nextMark,nextMarkProvided(fresh),nextMarkProvided
+nextMarkProvided=throw:GeneratorConflict|document already has generator, cannot provide external generator
+dropGenerator=ok
+nextMarkProvided=ok
+nextMarkProvided=ok
+nextMark=throw:NoGenerator|document does not have generator, must provide external generator
+nextMarkProvided=throw:SequenceMismatch|generator sequence mismatch: expected 3, got 1
+nextMarkProvided=throw:ChainIdMismatch|generator chain ID mismatch: expected 090bf2f8, got 3403eea7
+===
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'provenance': ProvenanceMark(db0363c595aa57034b5042bd490f0988a45ed784cc56cc70253678520d0d0628)
+]",
+  "## mutate privateKeyBase:7eb559bb: nextMarkProvided,dropGenerator
+nextMarkProvided=throw:NoProvenanceMark|no provenance mark to advance
+dropGenerator=ok
+===
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb keys×2: removeEndpoint,removeEndpoint,removeEndpoint,removeEndpoint
+removeEndpoint=true
+removeEndpoint=false
+removeEndpoint=false
+removeEndpoint=false
+===
+XID(71274df1) [
+    'key': PublicKeys(22355237, SigningPublicKey(48f7e2df, Ed25519PublicKey(2c3d976b)), EncapsulationPublicKey(36a0b431, X25519PublicKey(36a0b431)))
+    'key': PublicKeys(b67d8052, SigningPublicKey(8ba3695a, Ed25519PublicKey(b19aa0c9)), EncapsulationPublicKey(e472f495, X25519PublicKey(e472f495))) [
+        'allow': 'Sign'
+        'endpoint': URI(https://e2.example)
+    ]
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb keys×2 services×1: removeKeyReference,removeKeyReference,removeKeyReference,checkServices,removeKey
+removeKeyReference=true
+removeKeyReference=false
+removeKeyReference=undefined
+checkServices=throw:NoReferences|no key or delegate references in service 'https://s.example'
+removeKey=ok
+===
+XID(71274df1) [
+    'key': PublicKeys(22355237, SigningPublicKey(48f7e2df, Ed25519PublicKey(2c3d976b)), EncapsulationPublicKey(36a0b431, X25519PublicKey(36a0b431)))
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'service': URI(https://s.example) [
+        'allow': 'Sign'
+    ]
+]",
+  "## mutate privateKeyBase:7eb559bb delegates×1 services×1: removeDelegateReference,removeDelegateReference,removeDelegate,checkServices
+removeDelegateReference=true
+removeDelegateReference=false
+removeDelegate=ok
+checkServices=throw:NoReferences|no key or delegate references in service 'https://d.example'
+===
+XID(71274df1) [
+    'key': PublicKeys(eb9b1cae, SigningPublicKey(71274df1, SchnorrPublicKey(9022010e)), EncapsulationPublicKey(b4f7059a, X25519PublicKey(b4f7059a))) [
+        'allow': 'All'
+    ]
+    'service': URI(https://d.example) [
+        'allow': 'Access'
+    ]
 ]",
 ]
 `;

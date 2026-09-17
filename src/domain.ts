@@ -15,10 +15,10 @@
  * `ProvenanceMarkError` with code `Cbor` contributes its cause the same
  * way (`ProvenanceMark::try_from(CBOR)` returns the dcbor error).
  */
-import { CborError, type Cbor } from "@blockchaincommons/dcbor";
+import { CborDate, CborError, type Cbor } from "@blockchaincommons/dcbor";
 import { ComponentsError } from "@blockchaincommons/components";
 import { type Envelope, EnvelopeError, type EnvelopeInput } from "@blockchaincommons/envelope";
-import { ProvenanceMarkError } from "@blockchaincommons/provenance-mark";
+import { type DateInput, ProvenanceMarkError } from "@blockchaincommons/provenance-mark";
 import { XIDError } from "./error";
 
 /**
@@ -142,10 +142,30 @@ export function expectOneOf<T extends string>(
   throw new TypeError(`${name} must be one of ${allowed.map((a) => `"${a}"`).join(", ")}`);
 }
 
-/** A `Date` that holds a time, else a `TypeError`. */
-export function expectValidDate(value: unknown, name: string): Date {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
-  throw new TypeError(`${name} must be a valid Date`);
+/** A class whose instances a guard checks for (its constructor may be private). */
+export interface InstanceClass<T> {
+  readonly prototype: T;
+  readonly name: string;
+}
+
+/** `value` is an instance of `cls`, else a `TypeError` naming the argument. */
+export function expectInstance<T>(
+  value: unknown,
+  cls: InstanceClass<T>,
+  name: string,
+  what = `a ${cls.name}`,
+): T {
+  if (value instanceof (cls as unknown as abstract new () => T)) return value;
+  throw new TypeError(`${name} must be ${what}`);
+}
+
+/**
+ * A `Date` or `CborDate`, else a `TypeError`. Whether the date holds a
+ * time is the mark generator's check (`ProvenanceMark[InvalidDate]`).
+ */
+export function expectDateInput(value: unknown, name: string): DateInput {
+  if (value instanceof Date || value instanceof CborDate) return value;
+  throw new TypeError(`${name} must be a Date or a CborDate`);
 }
 
 /** `value` is not `null` (an absent option is `undefined`), else a `TypeError`. */

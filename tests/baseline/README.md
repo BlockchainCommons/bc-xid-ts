@@ -1,15 +1,17 @@
 # Frozen baseline build
 
-`xid-baseline.mjs` is the self-contained ESM bundle of `@blockchaincommons/xid` built from
-commit `c1425268d9c23764aaf396fb2c77f66475f4a434`, the wire-format reference before this package's API. It is built from
-the PUBLISHED `@bcts` packages (`@bcts/xid` 1.0.0-beta.6 and its closure,
-pinned by tests/baseline/package.json), so every sibling is inlined exactly
-once, with the behaviour consumers had.
+`xid-baseline.mjs` is the self-contained ESM bundle of `@blockchaincommons/xid` as it
+shipped at commit `050785674b2002245d332cd9df9e094168d97fd2` (`1.0.0-beta.2`), with every `@blockchaincommons`
+sibling inlined from the workspace. It also re-exports the sibling values the
+differential drives it with (keys, envelopes, CBOR, known values, the
+provenance generator), so they are the bundle's own classes.
 `xid-baseline.d.mts` is the public surface at that commit.
 
 `tests/differential.test.ts` runs every corpus recipe through this bundle and
-the working tree and asserts identical outcomes; it pins the sha256 below so
-an accidental rebuild cannot turn the differential into a self-comparison.
+the working tree and asserts identical outcomes outside the enumerated
+tombstones; it pins the sha256 below so an accidental rebuild cannot turn the
+differential into a self-comparison. Rebuild with
+`bun scripts/build-baseline.ts 0507856`.
 
-Baseline commit: c1425268d9c23764aaf396fb2c77f66475f4a434
-Baseline sha256: fe7af93fb0dcbc7a484ef135b6f82161838c7fffa76e9f63dff60c66dd3f32a1
+Baseline commit: 050785674b2002245d332cd9df9e094168d97fd2
+Baseline sha256: 44de782eb959ff35f0ee98b6dd803020d7d6e0dc28f1b05f13aaf4e059e78bb2

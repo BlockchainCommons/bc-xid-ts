@@ -53,8 +53,6 @@ describe("Service", () => {
   describe("Service properties", () => {
     it("should get and set URI", () => {
       const service = Service.from("https://example.com");
-      // `uri()` now returns a typed URI value (mirrors Rust `&URI`);
-      // use `uriString()` for the string form.
       expect(service.uri.toString()).toBe("https://example.com");
     });
 
@@ -91,6 +89,11 @@ describe("Service", () => {
 
       service.addKeyReference(keyRef);
       expect(service.keyReferences.size).toBe(1);
+      expect(service.removeKeyReference(keyRef)).toBe(true);
+      expect(service.removeKeyReference(keyRef)).toBe(false);
+      expect(service.hasKeyReference(keyRef)).toBe(false);
+      service.addKeyReference(keyRef);
+      expect(service.keyReferences.size).toBe(1);
     });
 
     it("should manage delegate references", () => {
@@ -102,6 +105,9 @@ describe("Service", () => {
 
       service.addDelegateReference(delegateRef);
       expect(service.delegateReferences.size).toBe(1);
+      expect(service.removeDelegateReference(delegateRef)).toBe(true);
+      expect(service.removeDelegateReference(delegateRef)).toBe(false);
+      expect(service.hasDelegateReference(delegateRef)).toBe(false);
     });
   });
 

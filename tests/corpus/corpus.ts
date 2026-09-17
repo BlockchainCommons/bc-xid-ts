@@ -40,7 +40,7 @@ const alice: DocSpec = { inception: { kind: "privateKeyBase", seed: S[0] } };
 const bobPub: DocSpec = { inception: { kind: "publicKeys", seed: S[1] } };
 const key = (seed: string, extra: Partial<KeySpec> = {}): KeySpec => ({ seed, ...extra });
 
-/** The reference's own document (X1) and the shapes its test suite builds. */
+/** The reference's own document and the shapes its test suite builds. */
 export function* referenceDocs(): Generator<Recipe> {
   yield { k: "doc", doc: { inception: { kind: "publicKeys", seed: S[0], scheme: "schnorr" } } };
   yield { k: "doc", doc: { inception: { kind: "xid", seed: S[0], scheme: "schnorr" } } };
@@ -192,6 +192,12 @@ export function* hand(): Generator<Recipe> {
     gen: { encrypt: "pw" },
     password: "wrong",
   };
+  // Taking the generator back out: absent, in the clear, unlocked, still locked.
+  const taken = { passphrase: "take", res: "low" as const, date: DATE };
+  yield { k: "provenance", genesis: taken, gen: "omit", take: true };
+  yield { k: "provenance", genesis: taken, gen: "include", take: true };
+  yield { k: "provenance", genesis: taken, gen: { encrypt: "pw" }, password: "pw", take: true };
+  yield { k: "provenance", genesis: taken, gen: { encrypt: "pw" }, take: true };
   // Nested delegate documents with their own keys, and services with every reference shape.
   const nested: DocSpec = {
     ...bobPub,
@@ -215,6 +221,21 @@ export function* hand(): Generator<Recipe> {
           name: "B",
           allow: ["Sign"],
           deny: ["Burn"],
+        },
+      ],
+    },
+  };
+  // A delegate built from a document that keeps changing: the delegate holds its own copy.
+  yield {
+    k: "doc",
+    doc: {
+      ...alice,
+      resolution: ["https://alice.example"],
+      delegates: [
+        { doc: bobPub, allow: ["Sign"], laterResolution: ["https://later.example"] },
+        {
+          doc: { ...nested, inception: { kind: "publicKeys", seed: S[2] } },
+          laterResolution: ["https://later.example", "btcr:later"],
         },
       ],
     },
@@ -347,6 +368,72 @@ export function* mutateRecipes(): Generator<Recipe> {
     [
       { ...alice, genesis: { passphrase: "Wolf", res: "medium", date: DATE } },
       [["clone"], ["nextMark", { date: "2024-01-01T00:00:00Z" }]],
+    ],
+    // The provided-generator form: refused beside the document's own generator, then
+    // advancing in place, then the embedded form with no generator, a stale generator,
+    // another chain, and no mark at all.
+    [
+      { ...alice, genesis: { passphrase: "Wolf", res: "low", date: DATE } },
+      [
+        ["nextMarkProvided", { date: "2025-01-02T00:00:00Z" }],
+        ["dropGenerator"],
+        ["nextMarkProvided", { date: "2025-01-02T00:00:00Z" }],
+        ["nextMarkProvided", { date: "2025-01-03T00:00:00Z", info: "third" }],
+        ["nextMark", { date: "2025-01-04T00:00:00Z" }],
+        ["nextMarkProvided", { date: "2025-01-04T00:00:00Z", fresh: true }],
+        [
+          "nextMarkProvided",
+          {
+            date: "2025-01-04T00:00:00Z",
+            genesis: { passphrase: "Other", res: "low", date: DATE },
+          },
+        ],
+      ],
+    ],
+    [
+      alice,
+      [
+        [
+          "nextMarkProvided",
+          { date: DATE, genesis: { passphrase: "Wolf", res: "low", date: DATE } },
+        ],
+        ["dropGenerator"],
+      ],
+    ],
+    // Removing endpoints and service references, and what the consistency check says after.
+    [
+      {
+        ...alice,
+        keys: [
+          key(S[1], { allow: ["Sign"], endpoints: ["https://e1.example", "https://e2.example"] }),
+          key(S[2]),
+        ],
+      },
+      [
+        ["removeEndpoint", 0, "https://e1.example"],
+        ["removeEndpoint", 0, "https://e1.example"],
+        ["removeEndpoint", 1, "https://e2.example"],
+        ["removeEndpoint", -1, "https://none.example"],
+      ],
+    ],
+    [
+      withService,
+      [
+        ["removeKeyReference", "https://s.example", 0],
+        ["removeKeyReference", "https://s.example", 0],
+        ["removeKeyReference", "https://absent.example", 0],
+        ["checkServices"],
+        ["removeKey", 0],
+      ],
+    ],
+    [
+      withDelegates,
+      [
+        ["removeDelegateReference", "https://d.example", 0],
+        ["removeDelegateReference", "https://d.example", 0],
+        ["removeDelegate", 0],
+        ["checkServices"],
+      ],
     ],
   ];
   for (const [doc, ops] of scripts) yield { k: "mutate", doc, ops };
@@ -778,7 +865,7 @@ export function* nicknameRecipes(): Generator<Recipe> {
   };
 }
 
-/** Constructor inputs: URIs the siblings accept or reject, and hex references. */
+/** Constructor inputs: URIs the siblings accept or reject. */
 export function* constructRecipes(): Generator<Recipe> {
   for (const v of [
     "https://svc.example",
@@ -794,14 +881,6 @@ export function* constructRecipes(): Generator<Recipe> {
   }
   yield { k: "construct", op: "endpoint", v: "https://e.example" };
   yield { k: "construct", op: "endpoint", v: "" };
-  yield {
-    k: "construct",
-    op: "keyRefHex",
-    v: "7a41e4c6ebb7f5e0d4c7cbd0dc6cbd7cd6f6d7a5cf6f2ec74e8fd9b7fa3b4dd1",
-  };
-  yield { k: "construct", op: "keyRefHex", v: "zz" };
-  yield { k: "construct", op: "keyRefHex", v: "abcd" };
-  yield { k: "construct", op: "delegateRefHex", v: "zz" };
 }
 
 /** The JavaScript input domain. */

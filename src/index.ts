@@ -15,6 +15,7 @@ export {
   type XIDErrorDetailsFor,
   type XIDErrorTyped,
   type ItemDetails,
+  type EmptyValueDetails,
   type PlainDetails,
   type UnexpectedPredicateDetails,
   type ServiceDetails,
@@ -49,20 +50,18 @@ export {
 
 export { Service, type ServiceInput } from "./service";
 
-export {
-  Delegate,
-  type DelegateInput,
-  type DelegateParseOptions,
-  type ParseXIDDocument,
-  type XIDDocumentLike,
-} from "./delegate";
+export { Delegate, type DelegateInput, type XIDDocumentLike } from "./delegate";
 
 export {
   Provenance,
   type ProvenanceInput,
   type ProvenanceEnvelopeOptions,
   type XIDGeneratorOptions,
+  type GeneratorData,
+  type TakenGenerator,
 } from "./provenance";
+/** The date inputs (`genesis.date`, the next-mark options) take a `Date` or a `CborDate`. */
+export { type DateInput } from "@blockchaincommons/provenance-mark";
 
 export {
   XIDDocument,
@@ -79,4 +78,5 @@ export {
   type SignedEnvelopeOptions,
   type AttachmentInput,
   type NextProvenanceMarkOptions,
+  type ProvidedGeneratorOptions,
 } from "./xid-document";

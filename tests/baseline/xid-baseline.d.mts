@@ -1,454 +1,407 @@
-import { EncapsulationPublicKey, KeyDerivationMethod, PrivateKeyBase, PrivateKeys, PublicKeys, Reference, Salt, Signature, Signer, SigningPrivateKey, SigningPublicKey, URI, Verifier, XID, XID as XID$1 } from "@blockchaincommons/components";
 import { KnownValue } from "@blockchaincommons/known-values";
-import { Attachments, Attachments as Attachments$1, Digest, Edgeable, Edgeable as Edgeable$1, Edges, Edges as Edges$1, Envelope, EnvelopeEncodable, EnvelopeEncodableValue } from "@blockchaincommons/envelope";
-import { ProvenanceMark, ProvenanceMarkGenerator, ProvenanceMarkResolution } from "@blockchaincommons/provenance-mark";
-import { Cbor } from "@blockchaincommons/dcbor-compat";
-import { UR } from "@blockchaincommons/uniform-resources";
+import { Envelope, EnvelopeInput, ToEnvelope } from "@blockchaincommons/envelope";
+import { Cbor, CborCodec, CborTagged, Tag, ToCbor } from "@blockchaincommons/dcbor";
+import { Digest, EncapsulationPublicKey, PrivateKeyBase, PrivateKeys, PublicKeys, Reference, Salt, Signature, Signer, SigningPublicKey, URI, Verifier, XID } from "@blockchaincommons/components";
+import { ProvenanceMark, ProvenanceMarkGenerator, ProvenanceMarkResolution, ProvenanceSeed } from "@blockchaincommons/provenance-mark";
+import { KeyDerivationMethod } from "@blockchaincommons/components/kdf";
+import { Attachments } from "@blockchaincommons/envelope/attachment";
+import { Edgeable, Edges } from "@blockchaincommons/envelope/edge";
+import { ToUR, UR } from "@blockchaincommons/uniform-resources";
+import { RngOptions } from "@blockchaincommons/rand";
 //#region src/error.d.ts
 /**
  * Copyright © 2023-2026 Blockchain Commons, LLC
  *
- *
- * XID Error Types
- *
- * Error types returned when operating on XID Documents.
- * Ported from bc-xid-rust/src/error.rs
+ * The one error this package throws: a `code` naming what went wrong (the
+ * reference's variant names) and `details` typed by that code.
  */
-declare enum XIDErrorCode {
-  DUPLICATE = "DUPLICATE",
-  NOT_FOUND = "NOT_FOUND",
-  STILL_REFERENCED = "STILL_REFERENCED",
-  EMPTY_VALUE = "EMPTY_VALUE",
-  UNKNOWN_PRIVILEGE = "UNKNOWN_PRIVILEGE",
-  INVALID_XID = "INVALID_XID",
-  MISSING_INCEPTION_KEY = "MISSING_INCEPTION_KEY",
-  INVALID_RESOLUTION_METHOD = "INVALID_RESOLUTION_METHOD",
-  MULTIPLE_PROVENANCE_MARKS = "MULTIPLE_PROVENANCE_MARKS",
-  UNEXPECTED_PREDICATE = "UNEXPECTED_PREDICATE",
-  UNEXPECTED_NESTED_ASSERTIONS = "UNEXPECTED_NESTED_ASSERTIONS",
-  NO_PERMISSIONS = "NO_PERMISSIONS",
-  NO_REFERENCES = "NO_REFERENCES",
-  UNKNOWN_KEY_REFERENCE = "UNKNOWN_KEY_REFERENCE",
-  UNKNOWN_DELEGATE_REFERENCE = "UNKNOWN_DELEGATE_REFERENCE",
-  KEY_NOT_FOUND_IN_DOCUMENT = "KEY_NOT_FOUND_IN_DOCUMENT",
-  DELEGATE_NOT_FOUND_IN_DOCUMENT = "DELEGATE_NOT_FOUND_IN_DOCUMENT",
-  INVALID_PASSWORD = "INVALID_PASSWORD",
-  ENVELOPE_NOT_SIGNED = "ENVELOPE_NOT_SIGNED",
-  SIGNATURE_VERIFICATION_FAILED = "SIGNATURE_VERIFICATION_FAILED",
-  NO_PROVENANCE_MARK = "NO_PROVENANCE_MARK",
-  GENERATOR_CONFLICT = "GENERATOR_CONFLICT",
-  NO_GENERATOR = "NO_GENERATOR",
-  CHAIN_ID_MISMATCH = "CHAIN_ID_MISMATCH",
-  SEQUENCE_MISMATCH = "SEQUENCE_MISMATCH",
-  ENVELOPE_PARSING = "ENVELOPE_PARSING",
-  COMPONENT = "COMPONENT",
-  CBOR = "CBOR",
-  PROVENANCE_MARK = "PROVENANCE_MARK"
+/** Every code an `XIDError` can carry: the reference's `Error` variant names. */
+type XIDErrorCode = "Duplicate" | "NotFound" | "StillReferenced" | "EmptyValue" | "UnknownPrivilege" | "InvalidXid" | "MissingInceptionKey" | "InvalidResolutionMethod" | "MultipleProvenanceMarks" | "UnexpectedPredicate" | "UnexpectedNestedAssertions" | "NoPermissions" | "NoReferences" | "UnknownKeyReference" | "UnknownDelegateReference" | "KeyNotFoundInDocument" | "DelegateNotFoundInDocument" | "InvalidPassword" | "EnvelopeNotSigned" | "SignatureVerificationFailed" | "NoProvenanceMark" | "GeneratorConflict" | "NoGenerator" | "ChainIdMismatch" | "SequenceMismatch" | "EnvelopeParsing" | "Component" | "Cbor" | "ProvenanceMark";
+/** Every code, for exhaustive tables and tests. */
+export declare const XID_ERROR_CODES: readonly XIDErrorCode[];
+/** The fields each code carries besides `code`. */
+interface XIDErrorDetailsByCode {
+  /** An item of this kind is already there. */
+  Duplicate: {
+    /** The item's kind: `"key"`, `"delegate"`, `"service"`, `"nickname"`, … */
+    readonly item: string;
+  };
+  /** No item of this kind is there. */
+  NotFound: {
+    /** The item's kind. */
+    readonly item: string;
+  };
+  /** A service still names the item. */
+  StillReferenced: {
+    /** The item's kind. */
+    readonly item: string;
+  };
+  /** The field must not be empty. */
+  EmptyValue: {
+    /** The field's name. */
+    readonly item: string;
+  };
+  /** A known value that names no privilege. */
+  UnknownPrivilege: unknown;
+  /** The inception key does not produce the document's XID. */
+  InvalidXid: unknown;
+  /** The document has no inception key, or it has no private keys. */
+  MissingInceptionKey: unknown;
+  /** A `'dereferenceVia'` object that is not a URI. */
+  InvalidResolutionMethod: unknown;
+  /** More than one `'provenance'` assertion. */
+  MultipleProvenanceMarks: unknown;
+  /** A service assertion with a predicate the parser does not take. */
+  UnexpectedPredicate: {
+    /** The predicate's known value, as decimal text. */
+    readonly predicate: string;
+  };
+  /** A service assertion whose object has assertions. */
+  UnexpectedNestedAssertions: unknown;
+  /** The service allows nothing. */
+  NoPermissions: {
+    /** The service's URI. */
+    readonly uri: string;
+  };
+  /** The service names no key and no delegate. */
+  NoReferences: {
+    /** The service's URI. */
+    readonly uri: string;
+  };
+  /** The service names a key the document lacks. */
+  UnknownKeyReference: {
+    /** The reference, rendered `Reference(<short hex>)`. */
+    readonly reference: string;
+    /** The service's URI. */
+    readonly uri: string;
+  };
+  /** The service names a delegate the document lacks. */
+  UnknownDelegateReference: {
+    /** The reference, rendered `Reference(<short hex>)`. */
+    readonly reference: string;
+    /** The service's URI. */
+    readonly uri: string;
+  };
+  /** `expectKey` found no such key. */
+  KeyNotFoundInDocument: {
+    /** The key's public keys, rendered. */
+    readonly key: string;
+  };
+  /** `expectDelegate` found no such delegate. */
+  DelegateNotFoundInDocument: {
+    /** The delegate's XID, rendered. */
+    readonly delegate: string;
+  };
+  /** A locked key or generator did not open. */
+  InvalidPassword: unknown;
+  /** Verification was asked of an unsigned envelope. */
+  EnvelopeNotSigned: unknown;
+  /** The inception key did not sign the envelope. */
+  SignatureVerificationFailed: unknown;
+  /** The document has no mark to advance. */
+  NoProvenanceMark: unknown;
+  /** A generator was given to a document that holds one. */
+  GeneratorConflict: unknown;
+  /** The document holds no generator and none was given. */
+  NoGenerator: unknown;
+  /** The generator continues another chain. */
+  ChainIdMismatch: {
+    /** The mark's chain id. */
+    readonly expected: Uint8Array;
+    /** The generator's chain id. */
+    readonly actual: Uint8Array;
+  };
+  /** The generator's next sequence number is not the mark's plus one. */
+  SequenceMismatch: {
+    /** The sequence number the mark demands. */
+    readonly expected: number;
+    /** The generator's next sequence number. */
+    readonly actual: number;
+  };
+  /** An envelope error inside a decoder; the error itself is `cause`. */
+  EnvelopeParsing: {
+    /** The envelope error's message. */
+    readonly message: string;
+  };
+  /** A components error; the error itself is `cause`. */
+  Component: {
+    /** The components error's message. */
+    readonly message: string;
+  };
+  /** A dcbor error inside a decoder; the error itself is `cause`. */
+  Cbor: {
+    /** The dcbor error's message. */
+    readonly message: string;
+  };
+  /** A provenance-mark error; the error itself is `cause`. */
+  ProvenanceMark: {
+    /** The provenance-mark error's message. */
+    readonly message: string;
+  };
 }
-declare class XIDError extends Error {
-  readonly code: XIDErrorCode;
-  readonly cause?: Error;
-  constructor(code: XIDErrorCode, message: string, cause?: Error);
-  /**
-   * Returned when attempting to add a duplicate item.
-   */
-  static duplicate(item: string): XIDError;
-  /**
-   * Returned when an item is not found.
-   */
-  static notFound(item: string): XIDError;
-  /**
-   * Returned when an item is still referenced by other items.
-   */
-  static stillReferenced(item: string): XIDError;
-  /**
-   * Returned when a value is invalid or empty.
-   */
-  static emptyValue(field: string): XIDError;
-  /**
-   * Returned when an unknown privilege is encountered.
-   */
-  static unknownPrivilege(): XIDError;
-  /**
-   * Returned when the XID is invalid.
-   */
-  static invalidXid(): XIDError;
-  /**
-   * Returned when the inception key is missing.
-   */
-  static missingInceptionKey(): XIDError;
-  /**
-   * Returned when the resolution method is invalid.
-   */
-  static invalidResolutionMethod(): XIDError;
-  /**
-   * Returned when multiple provenance marks are found.
-   */
-  static multipleProvenanceMarks(): XIDError;
-  /**
-   * Returned when an unexpected predicate is encountered.
-   */
-  static unexpectedPredicate(predicate: string): XIDError;
-  /**
-   * Returned when unexpected nested assertions are found.
-   */
-  static unexpectedNestedAssertions(): XIDError;
-  /**
-   * Returned when a service has no permissions.
-   */
-  static noPermissions(uri: string): XIDError;
-  /**
-   * Returned when a service has no key or delegate references.
-   */
-  static noReferences(uri: string): XIDError;
-  /**
-   * Returned when an unknown key reference is found in a service.
-   */
-  static unknownKeyReference(reference: string, uri: string): XIDError;
-  /**
-   * Returned when an unknown delegate reference is found in a service.
-   */
-  static unknownDelegateReference(reference: string, uri: string): XIDError;
-  /**
-   * Returned when a key is not found in the XID document.
-   */
-  static keyNotFoundInDocument(key: string): XIDError;
-  /**
-   * Returned when a delegate is not found in the XID document.
-   */
-  static delegateNotFoundInDocument(delegate: string): XIDError;
-  /**
-   * Returned when the password is invalid.
-   */
-  static invalidPassword(): XIDError;
-  /**
-   * Returned when the envelope is not signed.
-   */
-  static envelopeNotSigned(): XIDError;
-  /**
-   * Returned when signature verification fails.
-   */
-  static signatureVerificationFailed(): XIDError;
-  /**
-   * Returned when there is no provenance mark to advance.
-   */
-  static noProvenanceMark(): XIDError;
-  /**
-   * Returned when document already has generator but external generator was provided.
-   */
-  static generatorConflict(): XIDError;
-  /**
-   * Returned when document does not have generator but needs one.
-   */
-  static noGenerator(): XIDError;
-  /**
-   * Returned when generator chain ID doesn't match.
-   */
-  static chainIdMismatch(expected: Uint8Array, actual: Uint8Array): XIDError;
-  /**
-   * Returned when generator sequence doesn't match.
-   */
-  static sequenceMismatch(expected: number, actual: number): XIDError;
-  /**
-   * Envelope parsing error wrapper.
-   */
-  static envelopeParsing(cause?: Error): XIDError;
-  /**
-   * Component error wrapper.
-   */
-  static component(cause?: Error): XIDError;
-  /**
-   * CBOR error wrapper.
-   */
-  static cbor(cause?: Error): XIDError;
-  /**
-   * Provenance mark error wrapper.
-   */
-  static provenanceMark(cause?: Error): XIDError;
-}
+/** `details` of one code: `code` and that code's fields. */
+type XIDErrorDetailsFor<C extends XIDErrorCode> = C extends XIDErrorCode ? {
+  /** The discriminant. */
+  readonly code: C;
+} & XIDErrorDetailsByCode[C] : never;
+/** `details` is discriminated by `code`. */
+type XIDErrorDetails = XIDErrorDetailsFor<XIDErrorCode>;
 /**
- * Result type for XID operations.
+ * An `XIDError` whose `code` and `details` are narrowed to one code (or,
+ * with the default argument, the union over every code), so `error.code
+ * === "Duplicate"` narrows `error.details.item` to a string.
  */
-type XIDResult<T> = T;
+type XIDErrorTyped<C extends XIDErrorCode = XIDErrorCode> = C extends XIDErrorCode ? XIDError & {
+  /** The condition. */
+  readonly code: C;
+  /** The condition's fields. */
+  readonly details: XIDErrorDetailsFor<C>;
+} : never;
+/** `details` of the four item codes. */
+type ItemDetails = XIDErrorDetailsFor<"Duplicate" | "NotFound" | "StillReferenced" | "EmptyValue">;
+/** `details` of the codes with nothing more to say. */
+type PlainDetails = XIDErrorDetailsFor<"UnknownPrivilege" | "InvalidXid" | "MissingInceptionKey" | "InvalidResolutionMethod" | "MultipleProvenanceMarks" | "UnexpectedNestedAssertions" | "InvalidPassword" | "EnvelopeNotSigned" | "SignatureVerificationFailed" | "NoProvenanceMark" | "GeneratorConflict" | "NoGenerator">;
+/** `details` of `UnexpectedPredicate`. */
+type UnexpectedPredicateDetails = XIDErrorDetailsFor<"UnexpectedPredicate">;
+/** `details` of a service that is incomplete. */
+type ServiceDetails = XIDErrorDetailsFor<"NoPermissions" | "NoReferences">;
+/** `details` of a service reference that names nothing in the document. */
+type UnknownReferenceDetails = XIDErrorDetailsFor<"UnknownKeyReference" | "UnknownDelegateReference">;
+/** `details` of `KeyNotFoundInDocument`. */
+type KeyNotFoundDetails = XIDErrorDetailsFor<"KeyNotFoundInDocument">;
+/** `details` of `DelegateNotFoundInDocument`. */
+type DelegateNotFoundDetails = XIDErrorDetailsFor<"DelegateNotFoundInDocument">;
+/** `details` of `ChainIdMismatch`. */
+type ChainIdMismatchDetails = XIDErrorDetailsFor<"ChainIdMismatch">;
+/** `details` of `SequenceMismatch`. */
+type SequenceMismatchDetails = XIDErrorDetailsFor<"SequenceMismatch">;
+/** `details` of a wrapped failure from envelope, components, dcbor or provenance-mark. */
+type WrappedDetails = XIDErrorDetailsFor<"EnvelopeParsing" | "Component" | "Cbor" | "ProvenanceMark">;
+/**
+ * The error every operation of this package throws. `code` names the
+ * condition (one of `XIDErrorCode`, the reference's variant names),
+ * `details` is discriminated by it, and `cause` carries the sibling
+ * error when a decoder wrapped one.
+ *
+ * ```ts
+ * try {
+ *   doc.addKey(key);
+ * } catch (e) {
+ *   if (XIDError.isXIDError(e) && e.is("Duplicate")) console.log(e.details.item);
+ * }
+ * ```
+ */
+export declare class XIDError extends Error {
+  /** Always `"XIDError"`. */
+  override readonly name = "XIDError";
+  /** The condition, one of `XIDErrorCode`. */
+  readonly code: XIDErrorCode;
+  /** The fields of the condition, discriminated by `code`. */
+  readonly details: XIDErrorDetails;
+  private constructor();
+  private static make;
+  /** Whether `value` is an `XIDError`: an instance of this class. */
+  static isXIDError(value: unknown): value is XIDError;
+  /** Whether this error's code is `code`, narrowing `details`. */
+  is<C extends XIDErrorCode>(code: C): this is XIDErrorTyped<C>;
+  private static plain;
+  /** `Duplicate`: an item of this kind is already there. */
+  static duplicate(item: string): XIDErrorTyped<"Duplicate">;
+  /** `NotFound`: no item of this kind is there. */
+  static notFound(item: string): XIDErrorTyped<"NotFound">;
+  /** `StillReferenced`: a service still names the item. */
+  static stillReferenced(item: string): XIDErrorTyped<"StillReferenced">;
+  /** `EmptyValue`: the field must not be empty. */
+  static emptyValue(field: string): XIDErrorTyped<"EmptyValue">;
+  /** `UnknownPrivilege`: a known value that names no privilege. */
+  static unknownPrivilege(): XIDErrorTyped<"UnknownPrivilege">;
+  /** `InvalidXid`: the inception key does not produce the document's XID. */
+  static invalidXid(): XIDErrorTyped<"InvalidXid">;
+  /** `MissingInceptionKey`: the document has no inception key, or it has no private keys. */
+  static missingInceptionKey(): XIDErrorTyped<"MissingInceptionKey">;
+  /** `InvalidResolutionMethod`: a `'dereferenceVia'` object that is not a URI. */
+  static invalidResolutionMethod(): XIDErrorTyped<"InvalidResolutionMethod">;
+  /** `MultipleProvenanceMarks`: more than one `'provenance'` assertion. */
+  static multipleProvenanceMarks(): XIDErrorTyped<"MultipleProvenanceMarks">;
+  /** `UnexpectedPredicate`: a service assertion with a predicate the parser does not take. */
+  static unexpectedPredicate(predicate: string): XIDErrorTyped<"UnexpectedPredicate">;
+  /** `UnexpectedNestedAssertions`: a service assertion whose object has assertions. */
+  static unexpectedNestedAssertions(): XIDErrorTyped<"UnexpectedNestedAssertions">;
+  /** `NoPermissions`: the service allows nothing. */
+  static noPermissions(uri: string): XIDErrorTyped<"NoPermissions">;
+  /** `NoReferences`: the service names no key and no delegate. */
+  static noReferences(uri: string): XIDErrorTyped<"NoReferences">;
+  /** `UnknownKeyReference`: the service names a key the document lacks. */
+  static unknownKeyReference(reference: string, uri: string): XIDErrorTyped<"UnknownKeyReference">;
+  /** `UnknownDelegateReference`: the service names a delegate the document lacks. */
+  static unknownDelegateReference(reference: string, uri: string): XIDErrorTyped<"UnknownDelegateReference">;
+  /** `KeyNotFoundInDocument`: `expectKey` found no such key. */
+  static keyNotFoundInDocument(key: string): XIDErrorTyped<"KeyNotFoundInDocument">;
+  /** `DelegateNotFoundInDocument`: `expectDelegate` found no such delegate. */
+  static delegateNotFoundInDocument(delegate: string): XIDErrorTyped<"DelegateNotFoundInDocument">;
+  /** `InvalidPassword`: a locked key or generator did not open. */
+  static invalidPassword(): XIDErrorTyped<"InvalidPassword">;
+  /** `EnvelopeNotSigned`: verification was asked of an unsigned envelope. */
+  static envelopeNotSigned(): XIDErrorTyped<"EnvelopeNotSigned">;
+  /** `SignatureVerificationFailed`: the inception key did not sign the envelope. */
+  static signatureVerificationFailed(): XIDErrorTyped<"SignatureVerificationFailed">;
+  /** `NoProvenanceMark`: the document has no mark to advance. */
+  static noProvenanceMark(): XIDErrorTyped<"NoProvenanceMark">;
+  /** `GeneratorConflict`: a generator was given to a document that holds one. */
+  static generatorConflict(): XIDErrorTyped<"GeneratorConflict">;
+  /** `NoGenerator`: the document holds no generator and none was given. */
+  static noGenerator(): XIDErrorTyped<"NoGenerator">;
+  /** `ChainIdMismatch`: the generator continues another chain. */
+  static chainIdMismatch(expected: Uint8Array, actual: Uint8Array): XIDErrorTyped<"ChainIdMismatch">;
+  /** `SequenceMismatch`: the generator's next sequence number is not the mark's plus one. */
+  static sequenceMismatch(expected: number, actual: number): XIDErrorTyped<"SequenceMismatch">;
+  /**
+   * `EnvelopeParsing`: an envelope error inside a decoder. The message is
+   * the reference's `envelope parsing error`; the envelope error is
+   * `cause` and its message is `details.message`.
+   */
+  static envelopeParsing(cause: unknown): XIDErrorTyped<"EnvelopeParsing">;
+  /** `Component`: a components error; the message is the reference's `component error`. */
+  static component(cause: unknown): XIDErrorTyped<"Component">;
+  /** `Cbor`: a dcbor error inside a decoder; the message is the reference's `CBOR error`. */
+  static cbor(cause: unknown): XIDErrorTyped<"Cbor">;
+  /**
+   * `Cbor` from a CBOR or UR decoder entry point (`fromCbor`,
+   * `fromUntaggedCbor`, `fromUR`), where the reference returns the dcbor
+   * error itself: the message is the dcbor error's.
+   */
+  static cborDecode(cause: Error): XIDErrorTyped<"Cbor">;
+  /** `ProvenanceMark`: a provenance-mark error; the message is the reference's `provenance mark error`. */
+  static provenanceMark(cause: unknown): XIDErrorTyped<"ProvenanceMark">;
+}
 //#endregion
 //#region src/privilege.d.ts
 /**
- * Enum representing XID privileges.
+ * `All` grants every privilege; the operational ones (`Auth`, `Sign`,
+ * `Encrypt`, `Elide`, `Issue`, `Access`) and the management ones
+ * (`Delegate`, `Verify`, `Update`, `Transfer`, `Elect`, `Burn`, `Revoke`)
+ * name one capability each.
  */
-declare enum Privilege {
-  /** Allow all applicable XID operations */
-  All = "All",
-  /** Authenticate as the subject (e.g., log into services) */
-  Auth = "Auth",
-  /** Sign digital communications as the subject */
-  Sign = "Sign",
-  /** Encrypt messages from the subject */
-  Encrypt = "Encrypt",
-  /** Elide data under the subject's control */
-  Elide = "Elide",
-  /** Issue or revoke verifiable credentials on the subject's authority */
-  Issue = "Issue",
-  /** Access resources under the subject's control */
-  Access = "Access",
-  /** Delegate privileges to third parties */
-  Delegate = "Delegate",
-  /** Verify (update) the XID document */
-  Verify = "Verify",
-  /** Update service endpoints */
-  Update = "Update",
-  /** Remove the inception key from the XID document */
-  Transfer = "Transfer",
-  /** Add or remove other verifiers (rotate keys) */
-  Elect = "Elect",
-  /** Transition to a new provenance mark chain */
-  Burn = "Burn",
-  /** Revoke the XID entirely */
-  Revoke = "Revoke"
-}
+type Privilege = "All" | "Auth" | "Sign" | "Encrypt" | "Elide" | "Issue" | "Access" | "Delegate" | "Verify" | "Update" | "Transfer" | "Elect" | "Burn" | "Revoke";
+/** Every privilege, in the reference's order. */
+export declare const PRIVILEGES: readonly Privilege[];
+/** Whether `value` is one of the privilege names. */
+export declare function isPrivilege(value: unknown): value is Privilege;
+/** The known value the privilege is encoded as; `UnknownPrivilege` for a name that is not one. */
+export declare function privilegeKnownValue(privilege: Privilege): KnownValue;
+/** The privilege a known value names; `UnknownPrivilege` for any other value. */
+export declare function privilegeFromKnownValue(knownValue: KnownValue): Privilege;
+/** The privilege as a known-value envelope. */
+export declare function privilegeEnvelope(privilege: Privilege): Envelope;
 /**
- * Convert a Privilege to its corresponding KnownValue.
+ * The privilege a known-value envelope names: `EnvelopeParsing` when the
+ * subject is not a known value, `UnknownPrivilege` when it names no
+ * privilege.
  */
-declare function privilegeToKnownValue(privilege: Privilege): KnownValue;
-/**
- * Convert a KnownValue to its corresponding Privilege.
- */
-declare function privilegeFromKnownValue(knownValue: KnownValue): Privilege;
-/**
- * Convert a Privilege to an Envelope.
- */
-declare function privilegeToEnvelope(privilege: Privilege): Envelope;
-/**
- * Convert an Envelope to a Privilege.
- */
-declare function privilegeFromEnvelope(envelope: Envelope): Privilege;
+export declare function privilegeFromEnvelope(envelope: Envelope): Privilege;
 //#endregion
 //#region src/permissions.d.ts
-/**
- * Interface for types that have permissions.
- */
-interface HasPermissions {
-  /**
-   * Get the permissions for this object.
-   */
-  permissions(): Permissions;
-  /**
-   * Get a mutable reference to the permissions.
-   */
-  permissionsMut(): Permissions;
+/** What `Permissions.from` takes. */
+interface PermissionsInput {
+  /** The privileges allowed. */
+  allow?: Iterable<Privilege> | undefined;
+  /** The privileges denied. */
+  deny?: Iterable<Privilege> | undefined;
 }
-/**
- * Helper methods for HasPermissions implementers.
- */
-declare const HasPermissionsMixin: {
-  /**
-   * Get the set of allowed privileges.
-   */
-  allow(obj: HasPermissions): Set<Privilege>;
-  /**
-   * Get the set of denied privileges.
-   */
-  deny(obj: HasPermissions): Set<Privilege>;
-  /**
-   * Add an allowed privilege.
-   */
-  addAllow(obj: HasPermissions, privilege: Privilege): void;
-  /**
-   * Add a denied privilege.
-   */
-  addDeny(obj: HasPermissions, privilege: Privilege): void;
-  /**
-   * Remove an allowed privilege.
-   */
-  removeAllow(obj: HasPermissions, privilege: Privilege): void;
-  /**
-   * Remove a denied privilege.
-   */
-  removeDeny(obj: HasPermissions, privilege: Privilege): void;
-  /**
-   * Clear all permissions.
-   */
-  clearAllPermissions(obj: HasPermissions): void;
-};
-/**
- * Represents the permissions granted to a key or delegate.
- */
-declare class Permissions implements HasPermissions {
-  allow: Set<Privilege>;
-  deny: Set<Privilege>;
-  constructor(allow?: Set<Privilege>, deny?: Set<Privilege>);
-  /**
-   * Create a new empty Permissions object.
-   */
-  static new(): Permissions;
-  /**
-   * Create a new Permissions object that allows all privileges.
-   */
-  static newAllowAll(): Permissions;
-  /**
-   * Add permissions assertions to an envelope.
-   */
-  addToEnvelope(envelope: Envelope): Envelope;
-  /**
-   * Try to extract Permissions from an envelope.
-   */
-  static tryFromEnvelope(envelope: Envelope): Permissions;
-  /**
-   * Add an allowed privilege.
-   */
+/** Something that carries permissions: a key, a delegate, a service. */
+interface HasPermissions {
+  /** The permissions (live). */
+  readonly permissions: Permissions;
+  /** Allows `privilege`. */
+  allow(privilege: Privilege): void;
+  /** Denies `privilege`. */
+  deny(privilege: Privilege): void;
+}
+/** An allow set and a deny set of privileges. */
+export declare class Permissions {
+  private readonly _allow;
+  private readonly _deny;
+  private constructor();
+  /** Empty sets unless given. */
+  static from({ allow, deny }?: PermissionsInput): Permissions;
+  /** `All` allowed, nothing denied. */
+  static allowAll(): Permissions;
+  /** The allowed privileges (a copy). */
+  get allow(): ReadonlySet<Privilege>;
+  /** The denied privileges (a copy). */
+  get deny(): ReadonlySet<Privilege>;
+  /** Allows `privilege`. */
   addAllow(privilege: Privilege): void;
-  /**
-   * Add a denied privilege.
-   */
+  /** Denies `privilege`. */
   addDeny(privilege: Privilege): void;
+  /** Stops allowing `privilege`. */
+  removeAllow(privilege: Privilege): void;
+  /** Stops denying `privilege`. */
+  removeDeny(privilege: Privilege): void;
+  /** Empties both sets. */
+  clear(): void;
   /**
-   * Check if a specific privilege is allowed.
+   * Allowed (directly or through `All`) and not denied (directly or
+   * through `All`): a denial wins over an allowance. This is the
+   * package's own rule; the reference exposes the sets only.
    */
   isAllowed(privilege: Privilege): boolean;
-  /**
-   * Check if a specific privilege is denied.
-   */
+  /** Denied directly or through `All`. */
   isDenied(privilege: Privilege): boolean;
-  permissions(): Permissions;
-  permissionsMut(): Permissions;
+  /** Adds an `'allow'` assertion per allowed privilege, then a `'deny'` per denied one. */
+  addToEnvelope(envelope: Envelope): Envelope;
   /**
-   * Check equality with another Permissions object.
+   * The `'allow'` and `'deny'` assertions of an envelope. An object that
+   * is not a known value is `EnvelopeParsing`; one that names no
+   * privilege is `UnknownPrivilege`.
    */
+  static fromEnvelope(envelope: Envelope): Permissions;
+  /** Same allow and deny sets. */
   equals(other: Permissions): boolean;
-  /**
-   * Clone this Permissions object.
-   */
+  /** A copy. */
   clone(): Permissions;
-}
-//#endregion
-//#region src/name.d.ts
-/**
- * Interface for types that have a nickname.
- */
-interface HasNickname {
-  /**
-   * Get the nickname for this object.
-   */
-  nickname(): string;
-  /**
-   * Set the nickname for this object.
-   */
-  setNickname(name: string): void;
-}
-/**
- * Helper methods for HasNickname implementers.
- */
-declare const HasNicknameMixin: {
-  /**
-   * Add a nickname, throwing if one already exists or is empty.
-   */
-  addNickname(obj: HasNickname, name: string): void;
-};
-//#endregion
-//#region src/shared.d.ts
-/**
- * Copyright © 2023-2026 Blockchain Commons, LLC
- *
- *
- * Shared Reference Wrapper
- *
- * Provides a wrapper for shared references to objects.
- * In TypeScript, we don't have Arc/RwLock like Rust, but we can provide
- * a simple wrapper that allows shared access to a value.
- *
- * Ported from bc-xid-rust/src/shared.rs
- */
-/**
- * A wrapper for shared references to objects.
- *
- * Unlike Rust's Arc<RwLock<T>>, JavaScript uses reference semantics for objects,
- * so this is primarily a type-safe wrapper that makes the sharing explicit.
- */
-declare class Shared<T> {
-  private readonly value;
-  constructor(value: T);
-  /**
-   * Create a new Shared instance.
-   */
-  static new<T>(value: T): Shared<T>;
-  /**
-   * Get a read-only reference to the value.
-   */
-  read(): T;
-  /**
-   * Get a mutable reference to the value.
-   */
-  write(): T;
-  /**
-   * Check equality with another Shared instance.
-   */
-  equals(other: Shared<T>): boolean;
-  /**
-   * Clone this Shared instance.
-   * Note: This creates a shallow copy in JS; for deep copy, implement on T.
-   */
-  clone(): Shared<T>;
 }
 //#endregion
 //#region src/key.d.ts
 /**
- * Options for handling private keys in envelopes.
+ * How a key's private keys go into an envelope: left out, included (with
+ * a salt), elided (the digest of the included form), or locked with a
+ * password (Argon2id unless `method` says otherwise).
  */
-declare enum XIDPrivateKeyOptions {
-  /** Omit the private key from the envelope (default). */
-  Omit = "Omit",
-  /** Include the private key in plaintext (with salt for decorrelation). */
-  Include = "Include",
-  /** Include the private key assertion but elide it (maintains digest tree). */
-  Elide = "Elide",
-  /** Include the private key encrypted with a password. */
-  Encrypt = "Encrypt"
+type XIDPrivateKeyOptions = "omit" | "include" | "elide" | EncryptOptions;
+/** The password-locked form of private keys or a generator. */
+interface EncryptOptions {
+  /** The password, as text or bytes. */
+  encrypt: Uint8Array | string;
+  /** The key derivation method; Argon2id unless given. */
+  method?: KeyDerivationMethod | undefined;
+}
+/** What `Key.from` takes besides the public keys. */
+interface KeyInput {
+  /** With private keys the key is allowed `All` unless `permissions` says otherwise. */
+  privateKeys?: PrivateKeys | undefined;
+  /** The nickname; none unless given. */
+  nickname?: string | undefined;
+  /** The endpoints, as URIs or their text. */
+  endpoints?: Iterable<URI | string> | undefined;
+  /** The permissions; empty unless given (or `All` with private keys). */
+  permissions?: Permissions | undefined;
+}
+/** A password for a locked key or generator, as text or bytes. */
+interface PasswordOptions {
+  /** The password; absent means "leave locked material locked". */
+  password?: Uint8Array | string | undefined;
+}
+/** What `Key.toEnvelope` takes. */
+interface KeyEnvelopeOptions {
+  /** How the private keys go into the envelope; `"omit"` unless given. */
+  privateKeys?: XIDPrivateKeyOptions | undefined;
 }
 /**
- * Configuration for encrypting private keys.
+ * A key of a XID document: public keys, optionally private keys (in the
+ * clear or password-locked), a nickname, endpoints and permissions.
  */
-interface XIDPrivateKeyEncryptConfig {
-  type: XIDPrivateKeyOptions.Encrypt;
-  password: Uint8Array;
-  method?: KeyDerivationMethod;
-}
-/**
- * Union type for all private key options.
- */
-type XIDPrivateKeyOptionsValue = XIDPrivateKeyOptions.Omit | XIDPrivateKeyOptions.Include | XIDPrivateKeyOptions.Elide | XIDPrivateKeyEncryptConfig;
-/**
- * Private key data that can be either decrypted or encrypted.
- */
-type PrivateKeyData = {
-  type: "decrypted";
-  privateKeys: PrivateKeys;
-} | {
-  type: "encrypted";
-  envelope: Envelope;
-};
-/**
- * Represents a key in an XID document.
- *
- * Mirrors `bc-xid-rust/src/key.rs`. The on-the-wire shape:
- *
- * ```
- * PublicKeys [
- *     {
- *         'privateKey': PrivateKeys     ← (or encrypted/elided)
- *     } [
- *         'salt': Salt
- *     ]
- *     'nickname': "..."
- *     'endpoint': URI(...)
- *     'allow': '...'
- * ]
- * ```
- *
- * Notably the private-key assertion is itself a node — the `'salt'`
- * lives nested under the assertion, not as a sibling on the parent
- * envelope. This is what `add_salt_instance(salt)` produces in Rust and
- * what `Envelope.prototype.addSaltInstance` produces in TS.
- */
-declare class Key implements HasNickname, HasPermissions, EnvelopeEncodable, Verifier {
+export declare class Key implements HasPermissions, Verifier {
   private readonly _publicKeys;
   private readonly _privateKeyData;
   private _nickname;
@@ -456,516 +409,403 @@ declare class Key implements HasNickname, HasPermissions, EnvelopeEncodable, Ver
   private readonly _permissions;
   private constructor();
   /**
-   * Create a new Key with only public keys.
+   * A key from its public keys; no permissions unless private keys or
+   * `permissions` are given. A `null` `privateKeys` is a `TypeError`:
+   * absent private keys are `undefined`.
    */
-  static new(publicKeys: PublicKeys): Key;
-  /**
-   * Create a new Key with public keys and allow-all permissions.
-   */
-  static newAllowAll(publicKeys: PublicKeys): Key;
-  /**
-   * Create a new Key with private keys.
-   */
-  static newWithPrivateKeys(privateKeys: PrivateKeys, publicKeys: PublicKeys): Key;
-  /**
-   * Create a new Key with private key base (derives keys from it).
-   */
-  static newWithPrivateKeyBase(privateKeyBase: PrivateKeyBase): Key;
-  /**
-   * Get the public keys.
-   */
-  publicKeys(): PublicKeys;
-  /**
-   * Get the private keys, if available and decrypted.
-   */
-  privateKeys(): PrivateKeys | undefined;
-  /**
-   * Check if this key has decrypted private keys.
-   */
-  hasPrivateKeys(): boolean;
-  /**
-   * Check if this key has encrypted private keys.
-   */
-  hasEncryptedPrivateKeys(): boolean;
-  /**
-   * Get the salt used for private key decorrelation.
-   */
-  privateKeySalt(): Salt | undefined;
-  /**
-   * Get the reference for this key (based on public keys tagged CBOR).
-   */
-  reference(): Reference;
-  /**
-   * Get the signing public key.
-   */
-  signingPublicKey(): SigningPublicKey;
-  /**
-   * Get the encapsulation public key.
-   */
+  static from(publicKeys: PublicKeys, { privateKeys, nickname, endpoints, permissions }?: KeyInput): Key;
+  /** A public key allowed `All`. */
+  static allowAll(publicKeys: PublicKeys): Key;
+  /** The Schnorr and X25519 keys of a base, private keys included, allowed `All`. */
+  static fromPrivateKeyBase(privateKeyBase: PrivateKeyBase): Key;
+  /** The public keys. */
+  get publicKeys(): PublicKeys;
+  /** The private keys when held in the clear. */
+  get privateKeys(): PrivateKeys | undefined;
+  /** Whether the private keys are held in the clear. */
+  get hasPrivateKeys(): boolean;
+  /** Whether the private keys are held locked (parsed without the password). */
+  get hasEncryptedPrivateKeys(): boolean;
+  /** The salt the `'privateKey'` assertion carries. */
+  get privateKeySalt(): Salt | undefined;
+  /** The reference of the public keys. */
+  get reference(): Reference;
+  /** The signing public key. */
+  get signingPublicKey(): SigningPublicKey;
+  /** The encapsulation public key. */
   encapsulationPublicKey(): EncapsulationPublicKey;
-  /**
-   * Verify a signature against a message.
-   */
+  /** Whether `signature` is the public keys' signature of `message`. */
   verify(signature: Signature, message: Uint8Array): boolean;
-  /**
-   * Get the endpoints set. The set holds typed `URI` values (mirrors
-   * Rust `HashSet<URI>`); use `.toString()` on a URI for a plain
-   * string view.
-   */
-  endpoints(): Set<URI>;
-  /**
-   * Get the endpoints set for mutation.
-   */
-  endpointsMut(): Set<URI>;
-  /**
-   * Add an endpoint. Accepts either a URI value or a string (for
-   * ergonomic test/REPL use). The URI is the canonical form.
-   */
+  /** The endpoints (a copy). */
+  get endpoints(): ReadonlySet<URI>;
+  /** Adds an endpoint, as a URI or its text (a components error for text that is not a URI). */
   addEndpoint(endpoint: URI | string): void;
-  /**
-   * Add a permission.
-   */
-  addPermission(privilege: Privilege): void;
-  nickname(): string;
+  /** The nickname; empty when there is none. */
+  get nickname(): string;
+  /** Sets (or clears, with `""`) the nickname. */
   setNickname(name: string): void;
-  permissions(): Permissions;
-  permissionsMut(): Permissions;
-  /**
-   * Build the nested salt-bearing assertion envelope:
-   * ```
-   * { 'privateKey': PrivateKeys } [ 'salt': Salt ]
-   * ```
-   * Mirrors Rust `Key::private_key_assertion_envelope()`.
-   */
+  /** Sets the nickname once: `Duplicate` when set, `EmptyValue` when empty. */
+  addNickname(name: string): void;
+  /** The permissions (live). */
+  get permissions(): Permissions;
+  /** Allows `privilege`. */
+  allow(privilege: Privilege): void;
+  /** Denies `privilege`. */
+  deny(privilege: Privilege): void;
   private privateKeyAssertionEnvelope;
   /**
-   * Convert to envelope with specified options.
+   * The public keys as the subject, the private keys per `privateKeys`
+   * (a locked key stays locked), then `'nickname'`, `'endpoint'`s and
+   * the permissions. An unknown option is a `TypeError`.
    */
-  intoEnvelopeOpt(privateKeyOptions?: XIDPrivateKeyOptionsValue): Envelope;
-  intoEnvelope(): Envelope;
+  toEnvelope({ privateKeys }?: KeyEnvelopeOptions): Envelope;
   /**
-   * Try to extract a Key from an envelope, optionally with password for decryption.
-   *
-   * Mirrors Rust `Key::try_from_envelope` exactly:
-   * - Subject must be a tagged-CBOR PublicKeys leaf.
-   * - Optional private-key assertion follows the
-   *   `{predicate: object} [ 'salt': Salt ]` shape.
-   * - Endpoints are tagged URIs, not bare text.
-   * - Missing salt under a present private-key assertion is an error.
+   * A key from its envelope. A locked `'privateKey'` is unlocked with the
+   * password when one is given and it fits; otherwise it is kept locked.
+   * Every failure is an `XIDError`: a subject or leaf of the wrong type
+   * is `Cbor`; a missing or repeated `'salt'`, a second `'nickname'` or
+   * one that is not text are `EnvelopeParsing`; a permission that is not
+   * a known value is `EnvelopeParsing`, one that names no privilege is
+   * `UnknownPrivilege`.
    */
-  static tryFromEnvelope(envelope: Envelope, password?: Uint8Array): Key;
+  static fromEnvelope(envelope: Envelope, { password }?: PasswordOptions): Key;
+  private static privateKeyDataOf;
   /**
-   * Get the private key envelope, optionally decrypting it.
-   *
-   * Mirrors Rust `Key::private_key_envelope(password: Option<&[u8]>)`.
-   * Password is bytes; the legacy `string` form is accepted as a
-   * convenience for callers that have not yet migrated.
+   * The private keys as an envelope: in the clear when held so, unlocked
+   * with the password when locked (an `InvalidPassword` error when it
+   * does not fit), or the locked envelope itself without a password.
    */
-  privateKeyEnvelope(password?: Uint8Array | string): Envelope | undefined;
+  privateKeyEnvelope({ password }?: PasswordOptions): Envelope | undefined;
   /**
-   * Check equality with another Key.
+   * Same public keys, private material (in the clear or locked, with its
+   * salt), nickname, endpoints and permissions — as the reference's
+   * equality; a key parsed from an envelope that omitted its private
+   * keys is not equal to the original.
    */
   equals(other: Key): boolean;
-  /**
-   * Get a hash key for use in Sets/Maps.
-   */
-  hashKey(): string;
-  /**
-   * Clone this Key.
-   */
+  /** A copy: the private material shared, the endpoints and permissions copied. */
   clone(): Key;
 }
 //#endregion
 //#region src/service.d.ts
+/** What `Service.from` takes besides the URI. */
+interface ServiceInput {
+  /** The capability (`addCapability`). */
+  capability?: string | undefined;
+  /** The name (`setName`). */
+  name?: string | undefined;
+  /** The keys the service is reached through, by reference. */
+  keyReferences?: Iterable<Reference> | undefined;
+  /** The delegates the service is reached through, by reference. */
+  delegateReferences?: Iterable<Reference> | undefined;
+  /** The permissions; empty unless given. */
+  permissions?: Permissions | undefined;
+}
 /**
- * Represents a service endpoint in an XID document.
+ * A service of a XID document: a URI, key and delegate references, a
+ * capability, a name and permissions. On the wire only `'allow'`
+ * permissions round-trip: the parser rejects `'deny'` as the reference's
+ * does.
  */
-declare class Service implements HasPermissions, EnvelopeEncodable {
+export declare class Service implements HasPermissions {
   private readonly _uri;
-  private _keyReferences;
-  private _delegateReferences;
-  private _permissions;
+  private readonly _keyReferences;
+  private readonly _delegateReferences;
+  private readonly _permissions;
   private _capability;
   private _name;
-  constructor(uri: URI | string);
+  private constructor();
   /**
-   * Create a new Service with the given URI.
+   * A service at a URI (a components error for text that is not a URI);
+   * references and permissions can be added later.
    */
-  static new(uri: URI | string): Service;
-  /**
-   * Get the service URI as a typed value.
-   */
-  uri(): URI;
-  /**
-   * Get the service URI as a plain string.
-   */
-  uriString(): string;
-  /**
-   * Get the capability string.
-   */
-  capability(): string;
-  /**
-   * Set the capability string.
-   */
+  static from(uri: URI | string, { capability, name, keyReferences, delegateReferences, permissions }?: ServiceInput): Service;
+  /** The URI. */
+  get uri(): URI;
+  /** The capability; empty when there is none. */
+  get capability(): string;
+  /** Sets (or clears, with `""`) the capability. */
   setCapability(capability: string): void;
-  /**
-   * Add a capability, throwing if one already exists or is empty.
-   */
+  /** Sets the capability once; `Duplicate` when set, `EmptyValue` when empty. */
   addCapability(capability: string): void;
-  /**
-   * Get the key references as a Set of typed Reference values.
-   */
-  keyReferences(): Set<Reference>;
-  /**
-   * Get the underlying key-references Map for direct mutation.
-   */
-  keyReferencesMut(): Map<string, Reference>;
-  /**
-   * Add a key reference by hex string (back-compat alias).
-   */
-  addKeyReferenceHex(keyReferenceHex: string): void;
-  /**
-   * Add a key reference.
-   */
+  /** The key references (a copy). */
+  get keyReferences(): ReadonlySet<Reference>;
+  /** Whether the service references this key. */
+  hasKeyReference(reference: Reference): boolean;
+  /** Adds a key reference; `Duplicate` when it is already there. */
   addKeyReference(keyReference: Reference): void;
-  /**
-   * Get the delegate references as a Set of typed Reference values.
-   */
-  delegateReferences(): Set<Reference>;
-  /**
-   * Get the underlying delegate-references Map for direct mutation.
-   */
-  delegateReferencesMut(): Map<string, Reference>;
-  /**
-   * Add a delegate reference by hex string (back-compat alias).
-   */
-  addDelegateReferenceHex(delegateReferenceHex: string): void;
-  /**
-   * Add a delegate reference.
-   */
+  /** Adds a key reference given as 64 hex characters (a components error otherwise). */
+  addKeyReferenceHex(keyReferenceHex: string): void;
+  /** References the key's public keys. */
+  addKey(key: {
+    readonly publicKeys: PublicKeys;
+  }): void;
+  /** The delegate references (a copy). */
+  get delegateReferences(): ReadonlySet<Reference>;
+  /** Whether the service references this delegate. */
+  hasDelegateReference(reference: Reference): boolean;
+  /** Adds a delegate reference; `Duplicate` when it is already there. */
   addDelegateReference(delegateReference: Reference): void;
-  /**
-   * Add a key by its public keys provider (convenience method).
-   * Matches Rust's `add_key(&mut self, key: &dyn PublicKeysProvider)`.
-   */
-  addKey(keyProvider: {
-    publicKeys(): PublicKeys;
+  /** Adds a delegate reference given as 64 hex characters (a components error otherwise). */
+  addDelegateReferenceHex(delegateReferenceHex: string): void;
+  /** References the delegate's (or document's) XID. */
+  addDelegate(delegate: {
+    readonly xid: XID;
   }): void;
-  /**
-   * Add a delegate by its XID provider (convenience method).
-   *
-   * Mirrors Rust's `add_delegate(&mut self, delegate: &dyn XIDProvider)`,
-   * which delegates to `xid.reference()` — i.e. the XID's 32 bytes used
-   * directly as the Reference. The earlier port hashed the bytes with
-   * SHA-256, producing a different reference that didn't round-trip
-   * across implementations.
-   */
-  addDelegate(xidProvider: {
-    xid(): XID$1;
-  }): void;
-  /**
-   * Get the name.
-   */
-  name(): string;
-  /**
-   * Set the name, throwing if one already exists or is empty.
-   */
+  /** The name; empty when there is none. */
+  get name(): string;
+  /** Sets the name once; `Duplicate` when set, `EmptyValue` when empty. */
   setName(name: string): void;
-  permissions(): Permissions;
-  permissionsMut(): Permissions;
+  /** The permissions (live). */
+  get permissions(): Permissions;
+  /** Allows `privilege`. */
+  allow(privilege: Privilege): void;
+  /** Denies `privilege` (written to the wire, but not read back: see the class). */
+  deny(privilege: Privilege): void;
+  /** The URI as the subject; `'key'`, `'delegate'`, `'capability'`, `'name'` and the permissions. */
+  toEnvelope(): Envelope;
   /**
-   * Convert to envelope.
+   * A service from its envelope. Rejects nested assertions
+   * (`UnexpectedNestedAssertions`) and any predicate but `'key'`,
+   * `'delegate'`, `'capability'`, `'name'` and `'allow'`
+   * (`UnexpectedPredicate`; a predicate that is not a known value is
+   * `EnvelopeParsing`); a subject or object of the wrong type is `Cbor`.
    */
-  intoEnvelope(): Envelope;
-  /**
-   * Try to extract a Service from an envelope.
-   *
-   * Mirrors Rust `Service::try_from`:
-   * - Subject must be a tagged-CBOR URI leaf.
-   * - Each `'key'`/`'delegate'` object is a tagged Reference leaf.
-   * - Nested assertions on any object are rejected.
-   * - Unknown predicates are rejected.
-   */
-  static tryFromEnvelope(envelope: Envelope): Service;
-  /**
-   * Check equality with another Service (based on URI).
-   */
+  static fromEnvelope(envelope: Envelope): Service;
+  /** Same URI, references, permissions, capability and name — as the reference's equality. */
   equals(other: Service): boolean;
-  /**
-   * Get a hash key for use in Sets/Maps.
-   */
-  hashKey(): string;
-  /**
-   * Clone this Service.
-   */
+  /** A copy. */
   clone(): Service;
 }
 //#endregion
 //#region src/delegate.d.ts
-/**
- * Forward declaration interface for XIDDocument to avoid circular dependency.
- * The actual XIDDocument class implements this interface.
- */
-interface XIDDocumentType {
-  xid(): XID$1;
-  intoEnvelope(): Envelope;
-  clone(): XIDDocumentType;
+/** What a delegate needs of its controller: `XIDDocument`, without importing it. */
+interface XIDDocumentLike {
+  /** The controller's XID. */
+  readonly xid: XID;
+  /** The controller's envelope (private keys and generator omitted, unsigned). */
+  toEnvelope(): Envelope;
+  /** Whether the controller equals `other`. */
+  equals(other: XIDDocumentLike): boolean;
+  /** A deep copy of the controller. */
+  clone(): XIDDocumentLike;
 }
-/**
- * Register the XIDDocument class to avoid circular dependency issues.
- * Called by xid-document.ts when it loads.
- */
-declare function registerXIDDocumentClass(cls: {
-  tryFromEnvelope(envelope: Envelope): XIDDocumentType;
-}): void;
-/**
- * Represents a delegate in an XID document.
- */
-declare class Delegate implements HasPermissions, EnvelopeEncodable {
+/** Parses a controller document from its envelope: `XIDDocument.fromEnvelope`. */
+type ParseXIDDocument = (envelope: Envelope) => XIDDocumentLike;
+/** What `Delegate.from` takes besides the controller. */
+interface DelegateInput {
+  /** The permissions granted; none unless given. */
+  permissions?: Permissions | undefined;
+}
+/** What `Delegate.fromEnvelope` takes besides the envelope. */
+interface DelegateParseOptions {
+  /** The parser of the controller's envelope; `XIDDocument.fromEnvelope` unless given. */
+  parseDocument?: ParseXIDDocument | undefined;
+}
+/** A delegate: a controller document and the permissions this document grants it. */
+export declare class Delegate implements HasPermissions {
   private readonly _controller;
   private readonly _permissions;
   private constructor();
+  /** A delegate controlled by `controller`, with no permissions unless given. */
+  static from(controller: XIDDocumentLike, { permissions }?: DelegateInput): Delegate;
+  /** The controlling document (live: mutating it mutates the delegate). */
+  get controller(): XIDDocumentLike;
+  /** The controller's XID. */
+  get xid(): XID;
+  /** The reference of the controller's XID. */
+  get reference(): Reference;
+  /** The permissions granted (live). */
+  get permissions(): Permissions;
+  /** Allows `privilege`. */
+  allow(privilege: Privilege): void;
+  /** Denies `privilege`. */
+  deny(privilege: Privilege): void;
+  /** The controller's envelope, wrapped, with the permissions. */
+  toEnvelope(): Envelope;
   /**
-   * Create a new Delegate with the given controller document.
+   * A delegate from its envelope: the permissions, then the unwrapped
+   * controller parsed by `parseDocument` (`XIDDocument.fromEnvelope`
+   * unless given). A sibling failure is `EnvelopeParsing`.
    */
-  static new(controller: XIDDocumentType): Delegate;
-  /**
-   * Get the controller document.
-   */
-  controller(): Shared<XIDDocumentType>;
-  /**
-   * Get the XID of the controller.
-   */
-  xid(): XID$1;
-  /**
-   * Get the reference for this delegate.
-   *
-   * Mirrors Rust `impl ReferenceProvider for Delegate`, which delegates
-   * to `self.controller.read().xid().reference()` — i.e. the XID's
-   * 32 bytes used directly as the Reference. The previous TS port
-   * SHA-256-hashed the XID bytes, producing a different reference
-   * value that did not round-trip across implementations.
-   */
-  reference(): Reference;
-  permissions(): Permissions;
-  permissionsMut(): Permissions;
-  /**
-   * Convert to envelope.
-   */
-  intoEnvelope(): Envelope;
-  /**
-   * Try to extract a Delegate from an envelope.
-   */
-  static tryFromEnvelope(envelope: Envelope): Delegate;
-  /**
-   * Check equality with another Delegate (based on controller XID).
-   */
+  static fromEnvelope(envelope: Envelope, { parseDocument }?: DelegateParseOptions): Delegate;
+  /** Same controller document and permissions — as the reference's equality. */
   equals(other: Delegate): boolean;
-  /**
-   * Get a hash key for use in Sets/Maps.
-   */
-  hashKey(): string;
-  /**
-   * Clone this Delegate.
-   */
+  /** A deep copy. */
   clone(): Delegate;
 }
 //#endregion
 //#region src/provenance.d.ts
-/**
- * Options for handling generators in envelopes.
- */
-declare enum XIDGeneratorOptions {
-  /** Omit the generator from the envelope (default). */
-  Omit = "Omit",
-  /** Include the generator in plaintext (with salt for decorrelation). */
-  Include = "Include",
-  /** Include the generator assertion but elide it (maintains digest tree). */
-  Elide = "Elide",
-  /** Include the generator encrypted with a password. */
-  Encrypt = "Encrypt"
+/** How the generator goes into an envelope; the same four forms as private keys. */
+type XIDGeneratorOptions = "omit" | "include" | "elide" | EncryptOptions;
+/** What `Provenance.from` takes besides the mark. */
+interface ProvenanceInput {
+  /** The generator that produced the mark, when the document should keep it. */
+  generator?: ProvenanceMarkGenerator | undefined;
 }
-/**
- * Configuration for encrypting generators.
- */
-interface XIDGeneratorEncryptConfig {
-  type: XIDGeneratorOptions.Encrypt;
-  password: Uint8Array;
-  method?: KeyDerivationMethod;
+/** What `Provenance.toEnvelope` takes. */
+interface ProvenanceEnvelopeOptions {
+  /** How the generator goes into the envelope; `"omit"` unless given. */
+  generator?: XIDGeneratorOptions | undefined;
 }
-/**
- * Union type for all generator options.
- */
-type XIDGeneratorOptionsValue = XIDGeneratorOptions.Omit | XIDGeneratorOptions.Include | XIDGeneratorOptions.Elide | XIDGeneratorEncryptConfig;
-/**
- * Generator data that can be either decrypted or encrypted.
- */
-type GeneratorData = {
-  type: "decrypted";
-  generator: ProvenanceMarkGenerator;
-} | {
-  type: "encrypted";
-  envelope: Envelope;
-};
-/**
- * Represents provenance information in an XID document.
- */
-declare class Provenance implements EnvelopeEncodable {
+/** A provenance mark and, optionally, the generator that continues its chain. */
+export declare class Provenance {
   private _mark;
   private _generator;
   private constructor();
-  /**
-   * Create a new Provenance with just a mark.
-   */
-  static new(mark: ProvenanceMark): Provenance;
-  /**
-   * Create a new Provenance with a generator and mark.
-   */
-  static newWithGenerator(generator: ProvenanceMarkGenerator, mark: ProvenanceMark): Provenance;
-  /**
-   * Get the provenance mark.
-   */
-  mark(): ProvenanceMark;
-  /**
-   * Get the generator, if available and decrypted.
-   */
-  generator(): ProvenanceMarkGenerator | undefined;
-  /**
-   * Check if this provenance has a decrypted generator.
-   */
-  hasGenerator(): boolean;
-  /**
-   * Check if this provenance has an encrypted generator.
-   */
-  hasEncryptedGenerator(): boolean;
-  /**
-   * Get the salt used for generator decorrelation.
-   */
-  generatorSalt(): Salt | undefined;
-  /**
-   * Update the provenance mark.
-   */
+  /** A mark, with the generator that produced it when the document should keep it. */
+  static from(mark: ProvenanceMark, { generator }?: ProvenanceInput): Provenance;
+  /** The current mark. */
+  get mark(): ProvenanceMark;
+  /** The generator when held in the clear. */
+  get generator(): ProvenanceMarkGenerator | undefined;
+  /** Whether the generator is held in the clear. */
+  get hasGenerator(): boolean;
+  /** Whether the generator is held locked (parsed without the password). */
+  get hasEncryptedGenerator(): boolean;
+  /** The salt the `'provenanceGenerator'` assertion carries. */
+  get generatorSalt(): Salt | undefined;
+  /** Replaces the mark (no chain check, as the reference's `set_mark`). */
   setMark(mark: ProvenanceMark): void;
-  /**
-   * Set or replace the generator.
-   */
+  /** Sets or replaces the generator, with a fresh salt. */
   setGenerator(generator: ProvenanceMarkGenerator): void;
+  /** Removes the generator, returning whether one was held. */
+  takeGenerator(): boolean;
   /**
-   * Take and remove the generator.
+   * The generator, unlocking a locked one with the password (it stays
+   * unlocked); `InvalidPassword` when it is locked and the password is
+   * missing or wrong; `undefined` when there is no generator.
    */
-  takeGenerator(): {
-    data: GeneratorData;
-    salt: Salt;
-  } | undefined;
-  /**
-   * Get a mutable reference to the generator, decrypting if necessary.
-   */
-  generatorMut(password?: Uint8Array): ProvenanceMarkGenerator | undefined;
-  /**
-   * Build the salted assertion envelope:
-   * ```
-   * { 'provenanceGenerator': <generator> } [ 'salt': Salt ]
-   * ```
-   * Mirrors Rust `Provenance::generator_assertion_envelope()`.
-   */
+  unlockGenerator({ password }?: PasswordOptions): ProvenanceMarkGenerator | undefined;
+  /** A generator from its envelope; a provenance-mark failure is `ProvenanceMark`. */
+  private static generatorOf;
   private generatorAssertionEnvelope;
   /**
-   * Get the generator envelope, optionally decrypting it.
-   *
-   * Mirrors Rust `Provenance::generator_envelope(password)`. The
-   * unencrypted variant returns the same structured envelope produced
-   * by `ProvenanceMarkGenerator::into_envelope()` — never the legacy
-   * JSON-bytes form.
+   * The generator as an envelope: in the clear when held so, unlocked
+   * with the password when locked (`InvalidPassword` when it does not
+   * fit), or the locked envelope itself without a password.
    */
-  generatorEnvelope(password?: Uint8Array | string): Envelope | undefined;
+  generatorEnvelope({ password }?: PasswordOptions): Envelope | undefined;
   /**
-   * Convert to envelope with specified options.
+   * The mark as the subject; the generator per `generator` (a locked one
+   * stays locked). An unknown option is a `TypeError`.
    */
-  intoEnvelopeOpt(generatorOptions?: XIDGeneratorOptionsValue): Envelope;
-  intoEnvelope(): Envelope;
+  toEnvelope({ generator }?: ProvenanceEnvelopeOptions): Envelope;
   /**
-   * Try to extract a Provenance from an envelope, optionally with password for decryption.
-   *
-   * Mirrors Rust `Provenance::try_from_envelope`:
-   * - Subject is a tagged-CBOR ProvenanceMark leaf.
-   * - The optional generator assertion follows the
-   *   `{ predicate: object } [ 'salt': Salt ]` shape.
-   * - Missing salt under a present generator assertion is an error.
+   * A provenance from its envelope. A locked generator is unlocked with
+   * the password when one is given and it fits; otherwise it is kept
+   * locked. A subject that is not a mark is `Cbor`; a missing or repeated
+   * `'salt'` is `EnvelopeParsing`; a generator envelope that is not a
+   * generator's is `ProvenanceMark`.
    */
-  static tryFromEnvelope(envelope: Envelope, password?: Uint8Array): Provenance;
-  /**
-   * Check equality with another Provenance.
-   */
+  static fromEnvelope(envelope: Envelope, { password }?: PasswordOptions): Provenance;
+  private static generatorDataOf;
+  /** Same mark and generator (in the clear or locked, with its salt) — as the reference's equality. */
   equals(other: Provenance): boolean;
-  /**
-   * Clone this Provenance.
-   * Note: ProvenanceMark is immutable so we can use the same instance.
-   */
+  /** A copy: the generator material shared. */
   clone(): Provenance;
 }
 //#endregion
 //#region src/xid-document.d.ts
 /**
- * Options for creating the inception key.
+ * The inception key of a new document: public keys only, a private key
+ * base (Schnorr keys, private keys held), or a public/private pair.
  */
-type XIDInceptionKeyOptions = {
-  type: "default";
-} | {
-  type: "publicKeys";
+type XIDInceptionKey = PublicKeys | PrivateKeyBase | XIDInceptionKeyPair;
+/** An inception key given as a public/private pair. */
+interface XIDInceptionKeyPair {
+  /** The public keys. */
   publicKeys: PublicKeys;
-} | {
-  type: "privateKeyBase";
-  privateKeyBase: PrivateKeyBase;
-} | {
-  type: "privateKeys";
+  /** The private keys (not checked against the public keys, as the reference does not). */
   privateKeys: PrivateKeys;
-  publicKeys: PublicKeys;
-};
-/**
- * Options for creating the genesis mark.
- */
-type XIDGenesisMarkOptions = {
-  type: "none";
-} | {
-  type: "passphrase";
-  passphrase: string;
-  resolution?: ProvenanceMarkResolution;
-  date?: Date;
-  info?: Cbor;
-} | {
-  type: "seed";
-  seed: Uint8Array;
-  resolution?: ProvenanceMarkResolution;
-  date?: Date;
-  info?: Cbor;
-};
-/**
- * Options for signing an envelope.
- */
-type XIDSigningOptions = {
-  type: "none";
-} | {
-  type: "inception";
-} | {
-  type: "privateKeys";
-  privateKeys: PrivateKeys;
-} | {
-  type: "signingPrivateKey";
-  signingPrivateKey: SigningPrivateKey;
-};
-/**
- * Options for verifying the signature on an envelope when loading.
- */
-declare enum XIDVerifySignature {
-  /** Do not verify the signature (default). */
-  None = "None",
-  /** Verify that the envelope is signed with the inception key. */
-  Inception = "Inception"
 }
 /**
- * Represents an XID document.
+ * The genesis provenance mark of a new document: exactly one of a
+ * passphrase or a 32-byte seed (a `ProvenanceSeed` or its bytes), the
+ * resolution (`"high"` unless given), the date (now unless given) and
+ * the mark's info.
  */
-declare class XIDDocument implements EnvelopeEncodable, Edgeable$1 {
+interface XIDGenesis {
+  /** The passphrase the chain's seed derives from. */
+  passphrase?: string | undefined;
+  /** The chain's seed: a `ProvenanceSeed` or exactly 32 bytes. */
+  seed?: Uint8Array | ProvenanceSeed | undefined;
+  /** The chain's resolution; `"high"` unless given. */
+  resolution?: ProvenanceMarkResolution | undefined;
+  /** The genesis mark's date; now unless given. */
+  date?: Date | undefined;
+  /** The genesis mark's info. */
+  info?: Cbor | undefined;
+}
+/** What `XIDDocument.from` takes. */
+interface XIDDocumentInput {
+  /** The inception key, whose signing key the XID derives from. */
+  inceptionKey: XIDInceptionKey;
+  /** A genesis mark to start the provenance chain with. */
+  genesis?: XIDGenesis | undefined;
+}
+/** What `XIDDocument.random` takes. */
+interface XIDRandomOptions extends RngOptions {
+  /** A genesis mark to start the provenance chain with. */
+  genesis?: XIDGenesis | undefined;
+}
+/** Who signs the document's envelope: nobody, the inception key, or a given signer. */
+type XIDSigning = "none" | "inception" | Signer;
+/** Which signature `fromEnvelope` demands. */
+type XIDVerifySignature = "none" | "inception";
+/** What `XIDDocument.toEnvelope` takes. */
+interface XIDEnvelopeOptions {
+  /** How each key's private keys go into the envelope; `"omit"` unless given. */
+  privateKeys?: XIDPrivateKeyOptions | undefined;
+  /** How the provenance generator goes into the envelope; `"omit"` unless given. */
+  generator?: XIDGeneratorOptions | undefined;
+  /** Who signs; `"none"` unless given. */
+  sign?: XIDSigning | undefined;
+}
+/** What `XIDDocument.fromEnvelope` takes. */
+interface XIDParseOptions extends PasswordOptions {
+  /** Which signature to demand; `"none"` unless given. */
+  verify?: XIDVerifySignature | undefined;
+}
+/** What `XIDDocument.toSignedEnvelope` takes besides the signer. */
+interface SignedEnvelopeOptions {
+  /** How each key's private keys go into the envelope; `"omit"` unless given. */
+  privateKeys?: XIDPrivateKeyOptions | undefined;
+}
+/** What `XIDDocument.addAttachment` takes. */
+interface AttachmentInput {
+  /** The payload, as anything an envelope is made from. */
+  payload: EnvelopeInput;
+  /** The vendor, a reverse domain name. */
+  vendor: string;
+  /** The URI of the format the payload conforms to. */
+  conformsTo?: string | undefined;
+}
+/** What `nextProvenanceMark` takes. */
+interface NextProvenanceMarkOptions extends PasswordOptions {
+  /** The new mark's date; now unless given. */
+  date?: Date | undefined;
+  /** The new mark's info. */
+  info?: Cbor | undefined;
+  /**
+   * A generator kept outside the document; refused when the document
+   * holds one. When given, `password` is not used.
+   */
+  generator?: ProvenanceMarkGenerator | undefined;
+}
+/** The document's CBOR codec, with the tag it carries. */
+interface XIDDocumentCodec extends CborCodec<XIDDocument> {
+  /** The `xid` tag (40024). */
+  readonly tags: readonly Tag[];
+}
+/**
+ * A XID document: the keys, delegates, services, resolution methods,
+ * provenance, attachments and edges published under an extensible
+ * identifier. The document is mutable; its `keys`, `delegates` and
+ * `services` are copied-out arrays of live values, and `attachments` and
+ * `edges()` are the document's own containers.
+ */
+export declare class XIDDocument implements ToEnvelope, ToCbor, CborTagged, ToUR, Edgeable {
   private readonly _xid;
   private readonly _resolutionMethods;
   private readonly _keys;
@@ -977,352 +817,221 @@ declare class XIDDocument implements EnvelopeEncodable, Edgeable$1 {
   private _extraAssertions;
   private constructor();
   /**
-   * Create a new XIDDocument with the given options.
+   * A document whose XID derives from the inception key's signing key;
+   * the key is added allowed `All`. A genesis mark starts the provenance
+   * chain and keeps the generator in the document. A missing inception
+   * key or a malformed genesis is a `TypeError`; a seed of the wrong
+   * length is `ProvenanceMark`.
    */
-  static new(keyOptions?: XIDInceptionKeyOptions, markOptions?: XIDGenesisMarkOptions): XIDDocument;
-  private static inceptionKeyForOptions;
-  private static genesisMarkWithOptions;
-  /**
-   * Create an XIDDocument from just an XID.
-   */
-  static fromXid(xid: XID$1): XIDDocument;
-  /**
-   * Get the XID.
-   */
-  xid(): XID$1;
-  /**
-   * Get the resolution methods as a Set of typed URI values.
-   *
-   * Mirrors Rust `&HashSet<URI>`. Use `.toString()` on a URI for the
-   * plain-string form.
-   */
-  resolutionMethods(): Set<URI>;
-  /**
-   * Add a resolution method. Accepts either a typed URI value or a
-   * string (the latter is converted via `URI.from`).
-   */
+  static from({ inceptionKey, genesis }: XIDDocumentInput): XIDDocument;
+  /** A document with a random private key base as its inception key. */
+  static random({ rng, genesis }?: XIDRandomOptions): XIDDocument;
+  /** An empty document: just the XID. */
+  static fromXid(xid: XID): XIDDocument;
+  private static keyFor;
+  private static genesisFor;
+  /** A `ProvenanceSeed` from bytes; the wrong length is `ProvenanceMark`. */
+  private static seedOf;
+  /** The XID. */
+  get xid(): XID;
+  /** The XID's reference. */
+  get reference(): Reference;
+  /** No keys, delegates, services, resolution methods, provenance, attachments, edges or extra assertions. */
+  get isEmpty(): boolean;
+  /** Assertions the parser did not recognise, kept as they were (a copy). */
+  get extraAssertions(): readonly Envelope[];
+  /** The resolution methods (a copy). */
+  get resolutionMethods(): ReadonlySet<URI>;
+  /** Adds a resolution method, as a URI or its text (a components error for text that is not a URI). */
   addResolutionMethod(method: URI | string): void;
-  /**
-   * Remove a resolution method.
-   */
+  /** Removes a resolution method; whether it was there. */
   removeResolutionMethod(method: URI | string): boolean;
-  /**
-   * Get all keys.
-   */
-  keys(): Key[];
-  /**
-   * Add a key.
-   */
+  /** The keys (a copied-out array of live keys). */
+  get keys(): readonly Key[];
+  /** Adds a key; `Duplicate` when the public keys are already there. */
   addKey(key: Key): void;
+  /** The key with these public keys. */
+  key(publicKeys: PublicKeys): Key | undefined;
+  /** The key with this reference. */
+  keyByReference(reference: Reference): Key | undefined;
   /**
-   * Find a key by its public keys.
+   * Removes and returns the key; `StillReferenced` when a service names
+   * it, `NotFound` when it is not there.
    */
-  findKeyByPublicKeys(publicKeys: PublicKeys): Key | undefined;
-  /**
-   * Find a key by its reference.
-   */
-  findKeyByReference(reference: Reference): Key | undefined;
-  /**
-   * Take and remove a key.
-   */
+  removeKey(publicKeys: PublicKeys): Key;
+  /** Removes and returns the key without checking services; `undefined` when absent. */
   takeKey(publicKeys: PublicKeys): Key | undefined;
-  /**
-   * Remove a key.
-   */
-  removeKey(publicKeys: PublicKeys): void;
-  /**
-   * Check if the given signing public key is the inception signing key.
-   * Matches Rust: `is_inception_signing_key(&self, signing_public_key: &SigningPublicKey) -> bool`
-   */
+  /** The key with these public keys; `KeyNotFoundInDocument` unless it is there. */
+  expectKey(publicKeys: PublicKeys): Key;
+  /** Whether the XID derives from this signing key. */
   isInceptionSigningKey(signingPublicKey: SigningPublicKey): boolean;
-  /**
-   * Get the inception key, if it exists in the document.
-   */
-  inceptionKey(): Key | undefined;
-  /**
-   * Get the inception private keys, if available.
-   */
-  inceptionPrivateKeys(): PrivateKeys | undefined;
-  /**
-   * Get the encryption key (encapsulation public key) for this document.
-   *
-   * Prefers the inception key for encryption. If no inception key is available,
-   * falls back to the first key in the document.
-   */
-  encryptionKey(): EncapsulationPublicKey | undefined;
-  /**
-   * Remove the inception key from the document.
-   */
+  /** The key whose signing key the XID derives from. */
+  get inceptionKey(): Key | undefined;
+  /** The inception key's private keys, when held in the clear. */
+  get inceptionPrivateKeys(): PrivateKeys | undefined;
+  /** The inception key's signing key. */
+  get inceptionSigningKey(): SigningPublicKey | undefined;
+  /** The inception key's signing key, else the first key's. */
+  get verificationKey(): SigningPublicKey | undefined;
+  /** The inception key's encapsulation key, else the first key's. */
+  get encryptionKey(): EncapsulationPublicKey | undefined;
+  /** Removes and returns the inception key, if there is one. */
   removeInceptionKey(): Key | undefined;
-  /**
-   * Set the name (nickname) for a key identified by its public keys.
-   */
+  /** Sets the key's nickname; `NotFound` unless the key is there. */
   setNameForKey(publicKeys: PublicKeys, name: string): void;
-  /**
-   * Get the inception signing public key, if it exists.
-   */
-  inceptionSigningKey(): SigningPublicKey | undefined;
-  /**
-   * Get the verification (signing) key for this document.
-   * Prefers the inception key. Falls back to the first key.
-   */
-  verificationKey(): SigningPublicKey | undefined;
-  /**
-   * Extract inception private keys from an envelope (convenience static method).
-   */
-  static extractInceptionPrivateKeysFromEnvelope(envelope: Envelope, password: Uint8Array): PrivateKeys | undefined;
-  /**
-   * Get the private key envelope for a specific key, optionally decrypting it.
-   */
-  privateKeyEnvelopeForKey(publicKeys: PublicKeys, password?: string): Envelope | undefined;
-  /**
-   * Check that the document contains a key with the given public keys.
-   * Throws if not found.
-   */
-  checkContainsKey(publicKeys: PublicKeys): void;
-  /**
-   * Check that the document contains a delegate with the given XID.
-   * Throws if not found.
-   */
-  checkContainsDelegate(xid: XID$1): void;
-  /**
-   * Get the attachments container.
-   */
-  getAttachments(): Attachments$1;
-  /**
-   * Add an attachment with the specified payload and metadata.
-   */
-  addAttachment(payload: EnvelopeEncodableValue, vendor: string, conformsTo?: string): void;
-  /**
-   * Check if the document has any attachments.
-   */
-  hasAttachments(): boolean;
-  /**
-   * Remove all attachments.
-   */
-  clearAttachments(): void;
-  /**
-   * Get an attachment by its digest.
-   */
-  getAttachment(digest: Digest): Envelope | undefined;
-  /**
-   * Remove an attachment by its digest.
-   */
-  removeAttachment(digest: Digest): Envelope | undefined;
-  /**
-   * Get the edges container (read-only).
-   */
-  edges(): Edges$1;
-  /**
-   * Get the edges container (mutable).
-   */
-  edgesMut(): Edges$1;
-  /**
-   * Add an edge envelope.
-   */
-  addEdge(edgeEnvelope: Envelope): void;
-  /**
-   * Get an edge by its digest.
-   */
-  getEdge(digest: Digest): Envelope | undefined;
-  /**
-   * Remove an edge by its digest.
-   */
-  removeEdge(digest: Digest): Envelope | undefined;
-  /**
-   * Remove all edges.
-   */
-  clearEdges(): void;
-  /**
-   * Check if the document has any edges.
-   */
-  hasEdges(): boolean;
-  /**
-   * Check if the document is empty: no resolution methods, keys, delegates,
-   * services, provenance, attachments, edges, or extension assertions.
-   *
-   * Mirrors Rust `XIDDocument::is_empty`.
-   */
-  isEmpty(): boolean;
-  /**
-   * Get the preserved extension assertions — top-level assertions that are
-   * not recognized as XID document fields and round-trip unchanged.
-   *
-   * Mirrors Rust `XIDDocument::extra_assertions(&self) -> &[Envelope]`.
-   */
-  extraAssertions(): Envelope[];
-  /**
-   * Get all delegates.
-   */
-  delegates(): Delegate[];
-  /**
-   * Add a delegate.
-   */
+  /** The private keys of a key as an envelope (see `Key.privateKeyEnvelope`). */
+  privateKeyEnvelopeForKey(publicKeys: PublicKeys, options?: PasswordOptions): Envelope | undefined;
+  /** The inception key's private keys of a parsed envelope, unlocked with the password. */
+  static inceptionPrivateKeysFromEnvelope(envelope: Envelope, { password }?: PasswordOptions): PrivateKeys | undefined;
+  /** The delegates (a copied-out array of live delegates). */
+  get delegates(): readonly Delegate[];
+  /** Adds a delegate; `Duplicate` when a delegate with that XID is already there. */
   addDelegate(delegate: Delegate): void;
-  /**
-   * Find a delegate by XID.
-   */
-  findDelegateByXid(xid: XID$1): Delegate | undefined;
-  /**
-   * Find a delegate by reference.
-   */
-  findDelegateByReference(reference: Reference): Delegate | undefined;
-  /**
-   * Take and remove a delegate.
-   */
-  takeDelegate(xid: XID$1): Delegate | undefined;
-  /**
-   * Remove a delegate.
-   */
-  removeDelegate(xid: XID$1): void;
-  /**
-   * Get all services.
-   */
-  services(): Service[];
-  /**
-   * Find a service by URI.
-   */
-  findServiceByUri(uri: string): Service | undefined;
-  /**
-   * Add a service.
-   */
+  /** The delegate with this XID. */
+  delegate(xid: XID): Delegate | undefined;
+  /** The delegate whose XID has this reference. */
+  delegateByReference(reference: Reference): Delegate | undefined;
+  /** Removes and returns the delegate; `StillReferenced` when a service names it, `NotFound` when absent. */
+  removeDelegate(xid: XID): Delegate;
+  /** Removes and returns the delegate without checking services; `undefined` when absent. */
+  takeDelegate(xid: XID): Delegate | undefined;
+  /** The delegate with this XID; `DelegateNotFoundInDocument` unless it is there. */
+  expectDelegate(xid: XID): Delegate;
+  /** The services (a copied-out array of live services). */
+  get services(): readonly Service[];
+  /** The service at this URI. */
+  service(uri: URI | string): Service | undefined;
+  /** Adds a service; `Duplicate` when a service at that URI is already there. */
   addService(service: Service): void;
+  /** Removes and returns the service; `undefined` when absent. */
+  takeService(uri: URI | string): Service | undefined;
+  /** Removes and returns the service; `NotFound` when absent. */
+  removeService(uri: URI | string): Service;
+  /** Every service references known keys and delegates and allows something. */
+  expectServicesConsistent(): void;
   /**
-   * Take and remove a service.
+   * `NoReferences` without any key or delegate reference,
+   * `UnknownKeyReference`/`UnknownDelegateReference` for one the document
+   * lacks, `NoPermissions` without an allowed privilege.
    */
-  takeService(uri: string): Service | undefined;
-  /**
-   * Remove a service.
-   */
-  removeService(uri: string): void;
-  /**
-   * Check service consistency.
-   */
-  checkServicesConsistency(): void;
-  /**
-   * Check consistency of a single service.
-   */
-  checkServiceConsistency(service: Service): void;
-  /**
-   * Check if any service references the given key.
-   */
+  expectServiceConsistent(service: Service): void;
+  /** Whether any service references this key. */
   servicesReferenceKey(publicKeys: PublicKeys): boolean;
-  /**
-   * Check if any service references the given delegate.
-   *
-   * Mirrors Rust `services_reference_delegate(xid)` which uses
-   * `xid.reference()` — the XID bytes used directly as the
-   * Reference (no SHA-256 wrap), the same value used by
-   * `Service::add_delegate(...)` on the producer side.
-   */
-  servicesReferenceDelegate(xid: XID$1): boolean;
-  /**
-   * Get the provenance mark.
-   */
-  provenance(): ProvenanceMark | undefined;
-  /**
-   * Get the provenance generator.
-   */
-  provenanceGenerator(): ProvenanceMarkGenerator | undefined;
-  /**
-   * Set the provenance.
-   */
+  /** Whether any service references this delegate. */
+  servicesReferenceDelegate(xid: XID): boolean;
+  /** The attachments: the document's own container. */
+  get attachments(): Attachments;
+  /** Whether there are attachments. */
+  get hasAttachments(): boolean;
+  /** Adds an attachment. */
+  addAttachment({ payload, vendor, conformsTo }: AttachmentInput): void;
+  /** The attachment with this digest. */
+  attachment(digest: Digest): Envelope | undefined;
+  /** Removes and returns the attachment with this digest. */
+  removeAttachment(digest: Digest): Envelope | undefined;
+  /** Removes every attachment. */
+  clearAttachments(): void;
+  /** The edges: the document's own container (envelope's `Edgeable`). */
+  edges(): Edges;
+  /** The same container as `edges()` (envelope's `Edgeable` names both). */
+  edgesMut(): Edges;
+  /** Whether there are edges (envelope's `Edgeable`). */
+  hasEdges(): boolean;
+  /** Adds an edge envelope. */
+  addEdge(edgeEnvelope: Envelope): void;
+  /** The edge with this digest. */
+  edge(digest: Digest): Envelope | undefined;
+  /** `edge(digest)` under the name envelope's `Edgeable` uses. */
+  getEdge(digest: Digest): Envelope | undefined;
+  /** Removes and returns the edge with this digest. */
+  removeEdge(digest: Digest): Envelope | undefined;
+  /** Removes every edge. */
+  clearEdges(): void;
+  /** The current provenance mark. */
+  get provenance(): ProvenanceMark | undefined;
+  /** The generator when the document holds it in the clear. */
+  get provenanceGenerator(): ProvenanceMarkGenerator | undefined;
+  /** Sets (or clears) the mark, dropping any generator. */
   setProvenance(provenance: ProvenanceMark | undefined): void;
-  /**
-   * Set provenance with generator.
-   */
+  /** Sets the mark and the generator that continues its chain. */
   setProvenanceWithGenerator(generator: ProvenanceMarkGenerator, mark: ProvenanceMark): void;
   /**
-   * Advance the provenance mark using the embedded generator.
+   * Advances the chain: with the document's own generator (unlocked with
+   * the password when locked), or with a provided one when the document
+   * has none. The generator must continue the current mark's chain at
+   * the next sequence number. `NoProvenanceMark` without a mark,
+   * `NoGenerator`/`GeneratorConflict` for the wrong choice,
+   * `ChainIdMismatch`/`SequenceMismatch` for a generator that does not
+   * continue the mark; an invalid date is a `TypeError`.
    */
-  nextProvenanceMarkWithEmbeddedGenerator(password?: Uint8Array, date?: Date, info?: Cbor): void;
+  nextProvenanceMark({ date, info, password, generator }?: NextProvenanceMarkOptions): void;
   /**
-   * Advance the provenance mark using a provided generator.
+   * The XID as the subject; `'dereferenceVia'`, `'key'`, `'delegate'`,
+   * `'service'`, `'provenance'`, the extra assertions, attachments and
+   * edges; then signed per `sign` (`MissingInceptionKey` when the
+   * inception key or its private keys are missing). An unknown option
+   * is a `TypeError`.
    */
-  nextProvenanceMarkWithProvidedGenerator(generator: ProvenanceMarkGenerator, date?: Date, info?: Cbor): void;
+  toEnvelope({ privateKeys, generator, sign: signing }?: XIDEnvelopeOptions): Envelope;
+  /** The `sign` option checked: one of the two names, or a signer. */
+  private static signerOf;
+  /** `toEnvelope` signed by `signer`, the generator omitted. */
+  toSignedEnvelope(signer: Signer, { privateKeys }?: SignedEnvelopeOptions): Envelope;
   /**
-   * Convert to envelope with options.
+   * A document from its envelope. With `verify: "inception"` the envelope
+   * must be signed by the document's own inception key
+   * (`EnvelopeNotSigned`, `SignatureVerificationFailed`, `InvalidXid`);
+   * otherwise a wrapped (signed) subject is unwrapped and read as it is.
+   * The password unlocks locked private keys and generators. Every
+   * failure is an `XIDError`: a sibling error inside the parser is
+   * wrapped with the reference's code. An unknown `verify` is a
+   * `TypeError`.
    */
-  toEnvelope(privateKeyOptions?: XIDPrivateKeyOptionsValue, generatorOptions?: XIDGeneratorOptionsValue, signingOptions?: XIDSigningOptions): Envelope;
-  intoEnvelope(): Envelope;
-  /**
-   * Returns the untagged CBOR encoding for this document.
-   *
-   * Mirrors Rust `CBORTaggedEncodable for XIDDocument::untagged_cbor`:
-   * empty docs serialize as the raw 32-byte XID byte string; non-empty
-   * docs serialize as the envelope's tagged CBOR (tag 200).
-   */
+  static fromEnvelope(envelope: Envelope, { password, verify }?: XIDParseOptions): XIDDocument;
+  private static parse;
+  /** An empty document is its XID's bytes; otherwise the envelope's tagged CBOR. */
   untaggedCbor(): Cbor;
+  /** Tag `xid` (40024) over `untaggedCbor`. */
+  toCbor(): Cbor;
+  /** The tags this document's CBOR carries: `xid` (40024). */
+  cborTags(): Tag[];
+  /** The tagged-CBOR codec: `decode` is `fromCbor`, the tag required. */
+  static get codec(): XIDDocumentCodec;
   /**
-   * Returns the UR for this document.
-   *
-   * UR type is `xid` (matching `TAG_XID.name` and Rust). Body bytes are
-   * `untaggedCbor()`.
+   * A document from its tagged CBOR: the `xid` tag (40024) over the
+   * untagged form. A missing or different tag, or a form the untagged
+   * decoder rejects, is `Cbor` with the dcbor error's message.
    */
-  ur(): UR;
+  static fromCbor(cborValue: Cbor): XIDDocument;
   /**
-   * Returns the `ur:xid/...` string representation of this document.
-   *
-   * Mirrors Rust `xid_document.ur_string()`. Round-trip with
-   * {@link XIDDocument.fromURString} is byte-identical to Rust.
+   * A document from its untagged CBOR: a 32-byte string is the XID of an
+   * empty document; anything else is a document envelope. A tagged value
+   * is rejected (the envelope tag is expected), as the reference's
+   * `from_untagged_cbor` rejects it. A rejection is `Cbor`: the dcbor
+   * error's message, or the document error's (`envelope parsing error`,
+   * …) when the envelope decodes but the document does not.
    */
-  urString(): string;
+  static fromUntaggedCbor(cborValue: Cbor): XIDDocument;
+  /** `ur:xid/…` over `untaggedCbor`. */
+  toUR(): UR;
   /**
-   * Decode an XIDDocument from a UR.
-   *
-   * Mirrors Rust `CBORTaggedDecodable::from_untagged_cbor`:
-   *   - if the body is a CBOR byte string (32 bytes), it's an empty
-   *     XIDDocument carrying just the XID;
-   *   - otherwise it's an envelope's tagged CBOR (tag 200), which we
-   *     decode and feed through `fromEnvelope`.
+   * A document from a `ur:xid/…` UR. A UR of another type is `Cbor`
+   * (`expected UR type xid, but found …`), as the reference's `from_ur`
+   * reports it.
    */
   static fromUR(ur: UR): XIDDocument;
   /**
-   * Decode an XIDDocument from a `ur:xid/...` string.
-   */
-  static fromURString(urString: string): XIDDocument;
-  /**
-   * Decode an XIDDocument from untagged CBOR (the UR-body form).
-   */
-  static fromUntaggedCbor(cbor: Cbor): XIDDocument;
-  /**
-   * Extract an XIDDocument from an envelope.
-   */
-  static fromEnvelope(envelope: Envelope, password?: Uint8Array, verifySignature?: XIDVerifySignature): XIDDocument;
-  private static fromEnvelopeInner;
-  /**
-   * Create a signed envelope.
-   */
-  toSignedEnvelope(signingKey: Signer): Envelope;
-  /**
-   * Create a signed envelope with private key options.
-   */
-  toSignedEnvelopeOpt(signingKey: Signer, privateKeyOptions?: XIDPrivateKeyOptionsValue): Envelope;
-  /**
-   * Get the reference for this document.
-   *
-   * Mirrors Rust `impl ReferenceProvider for XIDDocument` ↔
-   * `XID::reference` which is `Reference::from_data(*self.data())` —
-   * the XID's bytes used directly. The previous TS implementation
-   * SHA-256-hashed the bytes, producing a different reference value.
-   */
-  reference(): Reference;
-  /**
-   * Check equality with another XIDDocument.
+   * Same XID, resolution methods, keys (public and private material,
+   * nickname, endpoints, permissions), delegates, services, provenance
+   * (mark and generator), attachments, edges and extra assertions — as
+   * the reference's equality.
    */
   equals(other: XIDDocument): boolean;
-  /**
-   * Clone this XIDDocument.
-   */
+  /** A deep copy. */
   clone(): XIDDocument;
-  /**
-   * Try to extract from envelope (alias for fromEnvelope with default options).
-   */
-  static tryFromEnvelope(envelope: Envelope): XIDDocument;
+  /** `XIDDocument(<short XID>)`. */
+  toString(): string;
 }
 //#endregion
-//#region src/index.d.ts
-declare const VERSION = "1.0.0-alpha.3";
-//#endregion
-export { Attachments, Delegate, type Edgeable, Edges, type GeneratorData, type HasNickname, HasNicknameMixin, type HasPermissions, HasPermissionsMixin, Key, Permissions, type PrivateKeyData, Privilege, Provenance, Service, Shared, VERSION, XID, XIDDocument, type XIDDocumentType, XIDError, XIDErrorCode, type XIDGeneratorEncryptConfig, XIDGeneratorOptions, type XIDGeneratorOptionsValue, type XIDGenesisMarkOptions, type XIDInceptionKeyOptions, type XIDPrivateKeyEncryptConfig, XIDPrivateKeyOptions, type XIDPrivateKeyOptionsValue, type XIDResult, type XIDSigningOptions, XIDVerifySignature, privilegeFromEnvelope, privilegeFromKnownValue, privilegeToEnvelope, privilegeToKnownValue, registerXIDDocumentClass };
+export type { AttachmentInput, ChainIdMismatchDetails, DelegateInput, DelegateNotFoundDetails, DelegateParseOptions, EncryptOptions, HasPermissions, ItemDetails, KeyEnvelopeOptions, KeyInput, KeyNotFoundDetails, NextProvenanceMarkOptions, ParseXIDDocument, PasswordOptions, PermissionsInput, PlainDetails, Privilege, ProvenanceEnvelopeOptions, ProvenanceInput, SequenceMismatchDetails, ServiceDetails, ServiceInput, SignedEnvelopeOptions, UnexpectedPredicateDetails, UnknownReferenceDetails, WrappedDetails, XIDDocumentCodec, XIDDocumentInput, XIDDocumentLike, XIDEnvelopeOptions, XIDErrorCode, XIDErrorDetails, XIDErrorDetailsByCode, XIDErrorDetailsFor, XIDErrorTyped, XIDGeneratorOptions, XIDGenesis, XIDInceptionKey, XIDInceptionKeyPair, XIDParseOptions, XIDPrivateKeyOptions, XIDRandomOptions, XIDSigning, XIDVerifySignature };
 //# sourceMappingURL=index.d.mts.map
