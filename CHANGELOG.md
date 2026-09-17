@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0-beta.3 - 2026-09-16
+## 1.0.0-beta.3 - 2026-09-17
 
 ### Changed (breaking)
 
@@ -15,7 +15,6 @@
 - **Removals the reference has.** `Key.removeEndpoint`, `Service.removeKeyReference`, `Service.removeDelegateReference` (the reference's `endpoints_mut`, `key_referenecs_mut`, `delegate_references_mut`), each returning whether the item was there.
 - **Gone.** `Service.addKeyReferenceHex`/`addDelegateReferenceHex` (write `addKeyReference(Reference.fromHex(hex))`); `Delegate.fromEnvelope`'s `parseDocument` option with `DelegateParseOptions` and `ParseXIDDocument` (the controller is always parsed with `XIDDocument.fromEnvelope`).
 - `EmptyValue`'s detail is `field`, the reference's name; `ItemDetails` covers the three `item` codes and `EmptyValueDetails` the fourth.
-- Requires `@blockchaincommons/provenance-mark` 1.0.0-beta.3.
 
 ### Added
 
@@ -24,10 +23,6 @@
 - The frozen baseline for the differential is this package's 1.0.0-beta.2 with the `@blockchaincommons` siblings inlined, built by `scripts/build-baseline.ts`; the `@bcts/xid` closure is gone from the package.
 - Vectors for the removers, both next-mark forms (the caller's generator advanced in place, a stale one, another chain, no mark, the document's own generator in the way), `takeGenerator` on absent, clear, unlocked and locked generators, and a delegate whose source document keeps changing after the delegate was built; the harness replays them all against the reference. The panic-mapped class is gone with the hex adders: a reference panic is a MISMATCH.
 - `GeneratorData`, `TakenGenerator`, `ProvidedGeneratorOptions`, `EmptyValueDetails`.
-
-### Verification
-
-- Rust harness: 389 vectors - 362 match, 27 js-only (J3 23, J4 4), 0 unparsable, 0 MISMATCH.
 
 ## 1.0.0-beta.2 - 2026-09-16
 
