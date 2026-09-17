@@ -134,8 +134,10 @@ anywhere fails the job.
 
 ## Maintenance
 
-When the reference moves: update the pins in `Cargo.toml`, run
-`cargo update -p bc-xid`, check the toolchain pin, regenerate the vectors
-(`bun run vectors:generate`), run the replay and copy the result line
-above. A new difference is a bug on one side: fix it. A JavaScript-only
-input becomes a class in `src/main.rs` and here, never a difference.
+When the reference moves: update the version and commit in
+`.github/versions.yml` (the `upstream.yml` workflow compares against them),
+update the pins in `Cargo.toml`, run `cargo update -p bc-xid`, check the
+toolchain pin, regenerate the vectors (`bun run vectors:generate`), run the
+replay and copy the result line above. A new difference is a bug on one
+side: fix it. A JavaScript-only input becomes a class in `src/main.rs` and
+here, never a difference.

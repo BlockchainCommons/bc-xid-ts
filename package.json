@@ -61,7 +61,7 @@
     "clean": "rm -rf dist",
     "docs": "typedoc",
     "bench": "bun run build && bun bench/benchmark.mjs",
-    "postinstall": "bun scripts/pin-lint-typescript.ts",
+    "prepare": "bun scripts/pin-lint-typescript.ts",
     "prepublishOnly": "npm run build",
     "lint:pkg": "publint && attw --pack . --profile node16",
     "check:deps": "bun scripts/check-deps.ts",
