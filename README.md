@@ -64,6 +64,7 @@ Runnable examples live in the [`examples/`](https://github.com/BlockchainCommons
 
 ### Version History
 
+- **1.0.0-beta.5 (October 19, 2026)** - Installs with npm on a host without Bun, with its `@blockchaincommons/*` dependencies at 1.0.0-beta.5 ([bc-components-ts#11](https://github.com/BlockchainCommons/bc-components-ts/issues/11)). No code changes.
 - **1.0.0-beta.3 (September 16, 2026)** - Dates take a `Date` or a `CborDate` (`DateInput`); every object argument is checked for its class; `Provenance.equals` compares generators through `ProvenanceMarkGenerator.equals`; the surface follows the reference's names (`findKeyByPublicKeys`, `checkContainsKey`, `addAllow`/`removeAllow`/`clearAllPermissions`, the two `nextProvenanceMarkWith…Generator` methods, `getAttachment`); `Delegate.from` copies its controller; endpoints and service references can be removed; `takeGenerator` and `removeResolutionMethod` return what they removed; the frozen baseline is this package's beta.2; a runnable `examples/document.ts`.
 - **1.0.0-beta.2 (September 16, 2026)** - Every decode failure is an `XIDError` with the reference's codes and messages; strict CBOR decoders (`fromCbor`, `fromUntaggedCbor`); typed error details; `addNickname`; options objects throughout; the JavaScript input domain checked.
 - **1.0.0-beta.1 (September 9, 2026)** - Initial beta implementation.

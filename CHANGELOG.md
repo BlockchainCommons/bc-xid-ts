@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0-beta.5 - 2026-10-19
+
+### Fixed
+
+- `npm install` works on a host without Bun: the `@blockchaincommons/*`
+  dependencies at 1.0.0-beta.5 no longer run Bun from `postinstall`
+  ([bc-components-ts#11](https://github.com/BlockchainCommons/bc-components-ts/issues/11)). No code changes.
+
 ## 1.0.0-beta.3 - 2026-09-17
 
 ### Changed (breaking)
